@@ -149,6 +149,12 @@ class EffectsService:
         base_scenario_buildings = await attribute_parser.parse_all_from_buildings(
             living_buildings=base_scenario_buildings,
         )
+        base_scenario_buildings = await asyncio.to_thread(
+            data_restorator.restore_demands,
+            buildings=base_scenario_buildings,
+            service_normative=normative_data["services_capacity_per_1000_normative"],
+            service_normative_type=normative_data["capacity_type"],
+        )
         base_scenario_buildings["is_project"] = True
         base_scenario_services = await effects_api_gateway.get_scenario_services(
             scenario_id=project_data["base_scenario"]["id"],
@@ -181,6 +187,7 @@ class EffectsService:
         before_buildings.drop_duplicates("building_id", keep="first", inplace=True)
         before_buildings.set_index("building_id", inplace=True)
         before_services.set_index("service_id", inplace=True)
+        before_services.drop_duplicates("geometry", inplace=True)
         if target_scenario_buildings.empty:
             local_crs = context_buildings.estimate_utm_crs()
         else:
@@ -189,6 +196,8 @@ class EffectsService:
         before_services.to_crs(local_crs, inplace=True)
         after_buildings.to_crs(local_crs, inplace=True)
         after_services.to_crs(local_crs, inplace=True)
+        #ToDo context - project objects relation should be revised
+        after_services.drop_duplicates("geometry", inplace=True)
         before_matrix = await asyncio.to_thread(
             matrix_builder.calculate_availability_matrix,
             buildings=before_buildings,

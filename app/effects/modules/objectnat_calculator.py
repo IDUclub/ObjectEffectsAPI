@@ -1,5 +1,4 @@
 import json
-from mailcap import subst
 from typing import Literal
 
 import pandas as pd
@@ -29,11 +28,12 @@ class ObjectNatCalculator:
             dict[str, gpd.GeoDataFrame]: dict with fields "buildings", "services" and "links"
         """
 
+
         build_prov, services_prov, links_prov = get_service_provision(
             buildings=buildings,
             services=services,
             adjacency_matrix=matrix,
-            threshold=int(service_normative*1000/60 * 40),
+            threshold=int(service_normative * 1000 / 60 * 40),
         )
 
         return {
@@ -64,9 +64,9 @@ class ObjectNatCalculator:
                          (
                                  supplied_demand_after - supplied_demand_before
                          ) - (
-                         unsupplied_demand_after - unsupplied_demand_before
-                 )
-            ) / total_demand
+                                 unsupplied_demand_after - unsupplied_demand_before
+                         )
+                 ) / total_demand
         return result
 
     # ToDo fix is_project attribute
@@ -87,11 +87,11 @@ class ObjectNatCalculator:
         """
 
         result = (
-                    supplied_demand_after-supplied_demand_before
-            ).apply(lambda x: max(0, x)) - (
-                    unsupplied_demand_after-unsupplied_demand_before
-            ).apply(lambda x: max(0, x)
-                    )
+                         supplied_demand_after - supplied_demand_before
+                 ).apply(lambda x: max(0, x)) - (
+                         unsupplied_demand_after - unsupplied_demand_before
+                 ).apply(lambda x: max(0, x)
+                         )
         return result
 
     def _calculate_effects(
@@ -106,6 +106,7 @@ class ObjectNatCalculator:
             pd.Series: effects results
         """
 
+        #ToDo fix calculation without/before
         effects = effects.copy()
         supplied_demand_within_before = effects["supplyed_demands_within_before"].fillna(0)
         supplied_demand_without_before = effects["supplyed_demands_without_before"].fillna(0)
@@ -113,37 +114,29 @@ class ObjectNatCalculator:
         supplied_demand_without_after = effects["supplyed_demands_without_after"].fillna(0)
         unsupplied_demand_within_before = effects["us_demands_within_before"].fillna(0)
         unsupplied_demand_within_after = effects["us_demands_within_after"].fillna(0)
-        total_supplied_demands_before = supplied_demand_without_before + supplied_demand_within_before
-        total_supplied_demands_after = supplied_demand_without_after + supplied_demand_within_after
-        total_us_demands_before = effects["demand"] - total_supplied_demands_before
-        total_us_demands_after = effects["demand"] - total_supplied_demands_after
+        total_supplied_demands_before = supplied_demand_without_before
+        total_supplied_demands_after = supplied_demand_without_after
+        total_us_demands_before = effects["us_demands_without_before"].fillna(0)
+        total_us_demands_after = effects["us_demands_without_after"].fillna(0)
         total_demand = int(effects["demand"].sum())
 
         effects.dropna(subset="is_project", inplace=True)
 
         project_total_supplied_demands_before = effects[
-            effects["is_project"]
-        ]["supplyed_demands_without_before"].fillna(0) + effects[
-            effects["is_project"]
-        ]["supplyed_demands_within_before"].fillna(0)
+                                                    effects["is_project"]
+                                                ]["supplyed_demands_without_before"].fillna(0)
 
         project_total_supplied_demands_after = effects[
-            effects["is_project"]
-        ]["supplyed_demands_without_after"].fillna(0) + effects[
-            effects["is_project"]
-        ]["supplyed_demands_within_after"].fillna(0)
+                                                   effects["is_project"]
+                                               ]["supplyed_demands_without_after"].fillna(0)
 
         project_total_us_demands_before = effects[
-            effects["is_project"]
-        ]["demand"].fillna(0) - effects[
-            effects["is_project"]
-        ]["supplyed_demands_within_before"].fillna(0)
+                                              effects["is_project"]
+                                          ]["us_demands_without_before"].fillna(0)
 
         project_total_us_demands_after = effects[
-            effects["is_project"]
-        ]["demand"].fillna(0) - effects[
-            effects["is_project"]
-        ]["supplyed_demands_within_after"].fillna(0)
+                                             effects["is_project"]
+                                         ]["us_demands_without_after"].fillna(0)
 
         project_total_demand = int(effects[effects["is_project"]]["demand"].sum())
 
@@ -160,13 +153,15 @@ class ObjectNatCalculator:
             unsupplied_demand_before=total_us_demands_before,
             total_demand=total_demand,
         )
-        effects["absolute_scenario_project"] = self._calculate_absolute(
+        effects["absolute_scenario_project"] = None
+        effects.loc[effects["is_project"], ["absolute_scenario_project"]] = self._calculate_absolute(
             supplied_demand_before=project_total_supplied_demands_before,
             supplied_demand_after=project_total_supplied_demands_after,
             unsupplied_demand_after=project_total_us_demands_after,
             unsupplied_demand_before=project_total_us_demands_before,
         )
-        effects["index_scenario_project"] = self._calculate_index(
+        effects["index_scenario_project"] = None
+        effects.loc[effects["is_project"], ["index_scenario_project"]] = self._calculate_index(
             supplied_demand_after=project_total_supplied_demands_after,
             supplied_demand_before=project_total_supplied_demands_before,
             unsupplied_demand_after=project_total_us_demands_after,
@@ -185,7 +180,7 @@ class ObjectNatCalculator:
     def estimate_effects(
             self,
             provision_before: gpd.GeoDataFrame,
-            provision_after:gpd.GeoDataFrame,
+            provision_after: gpd.GeoDataFrame,
     ) -> pd.DataFrame | gpd.GeoDataFrame:
         """
         Main function which calculates provision and estimates effects
@@ -208,7 +203,7 @@ class ObjectNatCalculator:
 
         provision_before[
             "us_demands_without_before"
-        ] = provision_before["demand"] - provision_before["supplyed_demands_without_before"]
+        ] = provision_before["demand"] - provision_before["supplyed_demands_within_before"]
 
         provision_after["supplyed_demands_within_after"] = provision_after["supplyed_demands_within"].copy()
 
@@ -218,7 +213,7 @@ class ObjectNatCalculator:
 
         provision_after[
             "supplyed_demands_without_after"
-        ] = provision_after["supplyed_demands_without"].copy()
+        ] = provision_after["supplyed_demands_within_after"] + provision_after["supplyed_demands_without"].copy()
 
         provision_after[
             "us_demands_without_after"
