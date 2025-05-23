@@ -31,6 +31,11 @@ class AttributeParser:
             living_buildings["physical_objects"].apply,
             lambda x: x[0]["building"]["floors"] if x[0]["building"] else None,
         )
+        if living_buildings["storeys_count"].isna().all():
+            living_buildings["storeys_count"] = await asyncio.to_thread(
+                living_buildings["physical_objects"].apply,
+                lambda x: x[0].get("properties").get("Количество этажей")
+            )
         living_buildings["building_id"] = await asyncio.to_thread(
             living_buildings["physical_objects"].apply,
             lambda x: x[0]["physical_object_id"],
