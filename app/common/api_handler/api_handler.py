@@ -89,7 +89,15 @@ class APIHandler:
                 params=params
         ) as response:
             result = await self._check_response_status(response)
+            if isinstance(result, list):
+                return result
+            elif isinstance(result, dict):
+                return result
             if not result:
+                if isinstance(result, list):
+                    return result
+                elif isinstance(result, dict):
+                    return result
                 return await self.get(
                     endpoint_url=endpoint_url,
                     headers=headers,

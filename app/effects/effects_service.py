@@ -61,6 +61,7 @@ class EffectsService:
         result["median_index_scenario_project"] = int(effects[effects["is_project"]]["index_scenario_project"].median())
         return result
 
+    # ToDo Add population retrievement by year
     # ToDo Split function
     # ToDo Rewrite to context ids normal handling
     async def calculate_effects(

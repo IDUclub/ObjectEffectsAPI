@@ -52,20 +52,26 @@ class EffectsAPIGateway:
                     return service_type
                 else:
                     raise http_exception(
-                        status_code=400,
-                        msg="Service type normative not found",
-                        _input={"service_type_id": service_type_id},
+                        status_code=404,
+                        msg="Service type normative not found in urban_db. ",
+                        _input={
+                            "year": year,
+                            "service_type_id": service_type_id,
+                        },
                         _detail={
                             "Available service ids": [service_type["id"] for service_type in response]
                         },
                     )
         raise http_exception(
-            status_code=400,
-            msg="Service type normative not found",
-            _input={"service_type_id": service_type_id},
+            status_code=404,
+            msg="Service type normative not found in urban_db. Try another year or service type.",
+            _input={
+                "year": year,
+                "service_type_id": service_type_id,
+            },
             _detail={
-                "Available service ids": [service_type["service_type"]["id"] for service_type in response]
-            }
+                "Available service ids": [service_type["id"] for service_type in response]
+            },
         )
 
     @staticmethod
