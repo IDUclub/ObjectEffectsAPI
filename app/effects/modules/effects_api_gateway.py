@@ -10,6 +10,7 @@ class EffectsAPIGateway:
     @staticmethod
     async def get_service_normative(
             territory_id: int,
+            context_ids: list[int],
             service_type_id: int,
             year: int = 2024,
     ) -> dict[str, int | str]:
@@ -17,6 +18,7 @@ class EffectsAPIGateway:
         Function retrieves normative data from urban_api
         Args:
             territory_id: territory id to get normative from
+            context_ids: context id to get normative from
             service_type_id: service to get normative from
             year: year to get normative from
         Returns:
@@ -25,12 +27,22 @@ class EffectsAPIGateway:
             400, http exception id not found
         """
 
-        response = await urban_api_handler.get(
-            f"/api/v1/territory/{territory_id}/normatives",
-            params={
-                "year": year,
-            }
-        )
+        if len(context_ids) == 1:
+            response = await urban_api_handler.get(
+                f"/api/v1/territory/{context_ids[0]}/normatives",
+                params={
+                    "year": year,
+                }
+            )
+            request_ter_id = context_ids[0]
+        else:
+            response = await urban_api_handler.get(
+                f"/api/v1/territory/{territory_id}/normatives",
+                params={
+                    "year": year,
+                }
+            )
+            request_ter_id = territory_id
         for service_type in response:
             if service_type["service_type"]["id"] == service_type_id:
                 if normative_value:=service_type["radius_availability_meters"]:
@@ -54,6 +66,9 @@ class EffectsAPIGateway:
                         status_code=404,
                         msg="Service type normative not found in urban_db. ",
                         _input={
+                            "territory_id": territory_id,
+                            "context_ids": context_ids,
+                            "request_ter_id": request_ter_id,
                             "year": year,
                             "service_type_id": service_type_id,
                         },
@@ -65,6 +80,9 @@ class EffectsAPIGateway:
             status_code=404,
             msg="Service type normative not found in urban_db. Try another year or service type.",
             _input={
+                "territory_id": territory_id,
+                "context_ids": context_ids,
+                "request_ter_id": request_ter_id,
                 "year": year,
                 "service_type_id": service_type_id,
             },
