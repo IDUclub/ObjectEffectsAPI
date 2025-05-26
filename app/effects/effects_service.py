@@ -85,6 +85,7 @@ class EffectsService:
         project_territory = await effects_api_gateway.get_project_territory(effects_params.project_id)
         normative_data = await effects_api_gateway.get_service_normative(
             territory_id=project_data["territory"]["id"],
+            context_ids=project_data["properties"]["context"],
             service_type_id=effects_params.service_type_id,
             year=effects_params.year,
         )
