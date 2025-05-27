@@ -110,6 +110,7 @@ class EffectsService:
             service_type_id=effects_params.service_type_id,
         )
         if context_services.empty:
+        #ToDo Revise to another code
             raise http_exception(
                 status_code=404,
                 msg="No services of {service_type_id} type found in context",
