@@ -43,6 +43,10 @@ jobs:
         run: echo "IMAGE=$IMAGE_NAME:$NOW" >> $GITHUB_ENV
       - name: checkout
         uses: actions/checkout@v4
+      - name: copy_env
+        env:
+          ENV_PATH: ${{secrets.ENV_PATH}}
+        run: cp "$ENV_PATH"/.env.development ./
       - name: run
 #        run: docker run -d --name "$CONTAINER_NAME" --env-file ./.env.development -p 8210:8000 "$IMAGE_NAME":"$NOW"
         run: docker compose -f docker-compose.actions.yml up -d
