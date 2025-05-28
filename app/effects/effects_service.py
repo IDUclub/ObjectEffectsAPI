@@ -86,7 +86,6 @@ class EffectsService:
             territory_id=project_data["territory"]["id"],
             context_ids=project_data["properties"]["context"],
             service_type_id=effects_params.service_type_id,
-            year=effects_params.year,
         )
         context_population = await effects_api_gateway.get_context_population(
             territory_ids_list=project_data["properties"]["context"]
