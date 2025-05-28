@@ -48,7 +48,7 @@ class EffectsAPIGateway:
             if not pd.isna(service_type["radius_availability_meters"]):
                 service_type["normative_value"] = service_type["radius_availability_meters"]
                 service_type["normative_type"] = "dist"
-                if service_type.get("services_per_1000_normative"):
+                if not pd.isna(service_type.get("services_per_1000_normative")):
                     service_type["capacity_type"] = "unit"
                 else:
                     service_type["capacity_type"] = "capacity"
@@ -56,7 +56,7 @@ class EffectsAPIGateway:
             elif not pd.isna(service_type["time_availability_minutes"]):
                 service_type["normative_value"] = service_type["time_availability_minutes"]
                 service_type["normative_type"] = "time"
-                if service_type.get("services_per_1000_normative"):
+                if not pd.isna(service_type.get("services_per_1000_normative")):
                     service_type["capacity_type"] = "unit"
                 else:
                     service_type["capacity_type"] = "capacity"
