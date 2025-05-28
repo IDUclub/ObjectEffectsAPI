@@ -41,6 +41,8 @@ jobs:
     steps:
       - name: set env
         run: echo "IMAGE=$IMAGE_NAME:$NOW" >> $GITHUB_ENV
+      - name: checkout
+        uses: actions/checkout@v4
       - name: run
 #        run: docker run -d --name "$CONTAINER_NAME" --env-file ./.env.development -p 8210:8000 "$IMAGE_NAME":"$NOW"
         run: docker compose -f docker-compose.actions.yml up -d
