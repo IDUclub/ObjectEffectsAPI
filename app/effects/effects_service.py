@@ -87,7 +87,6 @@ class EffectsService:
             territory_id=project_data["territory"]["id"],
             context_ids=project_data["properties"]["context"],
             service_type_id=effects_params.service_type_id,
-            year=effects_params.year,
         )
         context_population = await effects_api_gateway.get_context_population(
             territory_ids_list=project_data["properties"]["context"]
@@ -112,6 +111,7 @@ class EffectsService:
             service_type_id=effects_params.service_type_id,
         )
         if context_services.empty:
+        #ToDo Revise to another code
             raise http_exception(
                 status_code=404,
                 msg="No services of {service_type_id} type found in context",

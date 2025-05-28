@@ -2,6 +2,8 @@ import asyncio
 
 from shapely.geometry import shape
 import geopandas as gpd
+import numpy as np
+import pandas as pd
 
 from app.dependencies import urban_api_handler, http_exception
 
@@ -13,7 +15,6 @@ class EffectsAPIGateway:
             territory_id: int,
             context_ids: list[int],
             service_type_id: int,
-            year: int = 2024,
     ) -> dict[str, int | str]:
         """
         Function retrieves normative data from urban_api
@@ -31,52 +32,49 @@ class EffectsAPIGateway:
         if len(context_ids) == 1:
             response = await urban_api_handler.get(
                 f"/api/v1/territory/{context_ids[0]}/normatives",
-                params={
-                    "year": year,
-                }
             )
             request_ter_id = context_ids[0]
         else:
             response = await urban_api_handler.get(
                 f"/api/v1/territory/{territory_id}/normatives",
-                params={
-                    "year": year,
-                }
             )
             request_ter_id = territory_id
-        for service_type in response:
-            if service_type["service_type"]["id"] == service_type_id:
-                if normative_value:=service_type["radius_availability_meters"]:
-                    service_type["normative_value"] = normative_value
-                    service_type["normative_type"] = "dist"
-                    if service_type.get("services_per_1000_normative"):
-                        service_type["capacity_type"] = "unit"
-                    else:
-                        service_type["capacity_type"] = "capacity"
-                    return service_type
-                elif normative_value:=service_type["time_availability_minutes"]:
-                    service_type["normative_value"] = normative_value
-                    service_type["normative_type"] = "time"
-                    if service_type.get("services_per_1000_normative"):
-                        service_type["capacity_type"] = "unit"
-                    else:
-                        service_type["capacity_type"] = "capacity"
-                    return service_type
+        response_df = pd.DataFrame.from_records(response)
+        response_df["service_type_id"] = response_df["service_type"].apply(lambda x: x["id"])
+        service_type = response_df[(response_df["year"] == response_df["year"].max()) & (
+                    response_df["service_type_id"] == service_type_id)].iloc[0].to_dict()
+
+        if service_type["service_type"]["id"] == service_type_id:
+            if not pd.isna(service_type["radius_availability_meters"]):
+                service_type["normative_value"] = service_type["radius_availability_meters"]
+                service_type["normative_type"] = "dist"
+                if service_type.get("services_per_1000_normative"):
+                    service_type["capacity_type"] = "unit"
                 else:
-                    raise http_exception(
-                        status_code=404,
-                        msg="Service type normative not found in urban_db. ",
-                        _input={
-                            "territory_id": territory_id,
-                            "context_ids": context_ids,
-                            "request_ter_id": request_ter_id,
-                            "year": year,
-                            "service_type_id": service_type_id,
-                        },
-                        _detail={
-                            "Available service ids": [service_type["id"] for service_type in response]
-                        },
-                    )
+                    service_type["capacity_type"] = "capacity"
+                return service_type
+            elif not pd.isna(service_type["time_availability_minutes"]):
+                service_type["normative_value"] = service_type["time_availability_minutes"]
+                service_type["normative_type"] = "time"
+                if service_type.get("services_per_1000_normative"):
+                    service_type["capacity_type"] = "unit"
+                else:
+                    service_type["capacity_type"] = "capacity"
+                return service_type
+            else:
+                raise http_exception(
+                    status_code=404,
+                    msg="Service type normative not found in urban_db. ",
+                    _input={
+                        "territory_id": territory_id,
+                        "context_ids": context_ids,
+                        "request_ter_id": request_ter_id,
+                        "service_type_id": service_type_id,
+                    },
+                    _detail={
+                        "Available service ids": [service_type["id"] for service_type in response]
+                    },
+                )
         raise http_exception(
             status_code=404,
             msg="Service type normative not found in urban_db. Try another year or service type.",
@@ -84,11 +82,10 @@ class EffectsAPIGateway:
                 "territory_id": territory_id,
                 "context_ids": context_ids,
                 "request_ter_id": request_ter_id,
-                "year": year,
                 "service_type_id": service_type_id,
             },
             _detail={
-                "Available service ids": [service_type["id"] for service_type in response]
+                "Available service ids": response_df["service_type_id"].to_list()
             },
         )
 
@@ -229,7 +226,7 @@ class EffectsAPIGateway:
             }
         )
 
-        if (value:=population[0]["value"]) < 1:
+        if (value := population[0]["value"]) < 1:
             return None
         return value
 
@@ -270,6 +267,5 @@ class EffectsAPIGateway:
         )
         territory_gdf = gpd.GeoDataFrame(geometry=[shape(territory["geometry"])], crs=4326)
         return territory_gdf
-
 
 effects_api_gateway = EffectsAPIGateway()

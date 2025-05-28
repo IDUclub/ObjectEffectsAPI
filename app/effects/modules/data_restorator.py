@@ -132,16 +132,19 @@ class DataRestorator:
                 target_demand=target_total_demand
             )
             return buildings
+        elif service_normative_type == "unit":
+            buildings["demand"] = buildings["population"].astype(int).copy()
+            return buildings
         else:
             raise http_exception(
-                status_code=400,
+                status_code=500,
                 msg="Service demand normative not found",
                 _input={
                     "service_normative_type": service_normative_type,
                 },
                 _detail={
                     "available_demand_type": [
-                        "num", "capacity"
+                        "unit", "capacity"
                     ]
                 }
             )
