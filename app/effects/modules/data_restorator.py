@@ -70,6 +70,7 @@ class DataRestorator:
             target_population = self._restore_target_population(buildings)
         local_crs = buildings.estimate_utm_crs()
         buildings = buildings.to_crs(local_crs)
+        buildings["storeys_count"] = buildings["storeys_count"].apply(lambda x: int(round(x)))
         buildings["living_area"] = buildings.area * buildings["storeys_count"] * 0.8
         buildings["living_area"] = buildings["living_area"].astype(int)
         balanced_buildings = get_balanced_buildings(
