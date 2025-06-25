@@ -4,6 +4,7 @@ import asyncio
 import geopandas as gpd
 import pandas as pd
 from loguru import logger
+from fastapi import HTTPException
 
 from app.dependencies import http_exception
 from .dto.effects_dto import EffectsDTO
@@ -13,6 +14,7 @@ from .modules import (
     attribute_parser,
     matrix_builder, objectnat_calculator
 )
+from .shemas.effects_base_schema import EffectsSchema
 
 
 class EffectsService:
@@ -259,6 +261,31 @@ class EffectsService:
             "pivot": pivot,
         }
         return result
+
+    async def handle_effects_calculation(self, effects_params: EffectsDTO) -> EffectsSchema:
+        """
+        Function handles errors from effects calculations.
+        Args:
+            effects_params (EffectsDTO):
+        Returns:
+            EffectsSchema: with inf
+        Raises:
+            Any from Urban API
+            500, if internal server error
+        """
+        try:
+            result = await self.calculate_effects(effects_params)
+            return EffectsSchema(**result)
+        except HTTPException as http_e:
+            raise http_e
+        except Exception as e:
+            logger.exception(e)
+            raise http_exception(
+                500,
+                msg="Error during effects calculation",
+                _input=effects_params.__dict__,
+                _detail={"error": e.__str__()}
+            )
 
 
 effects_service = EffectsService()
