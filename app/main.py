@@ -1,9 +1,8 @@
-import aiofiles
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, FileResponse
 
-from .dependencies import config
+from .dependencies import config, http_exception
 from .effects.effects_controller import effects_router
 
 
@@ -31,10 +30,31 @@ async def read_root():
     return {"status": "OK"}
 
 @app.get("/logs")
-async def read_logs():
-    async with aiofiles.open(config.get("LOGS_FILE")) as logs_file:
-        logs = await logs_file.read()
-        return logs[-1:-10000]
+async def get_logs():
+    """
+    Get logs file from app
+    """
+
+    try:
+        return FileResponse(
+            f"{config.get('LOG_FILE')}.log",
+            media_type='application/octet-stream',
+            filename=f"ObjectEffects.log",
+        )
+    except FileNotFoundError as e:
+        raise http_exception(
+            status_code=404,
+            msg="Log file not found",
+            _input={"lof_file_name": f".log"},
+            _detail={"error": e.__str__()}
+        )
+    except Exception as e:
+        raise http_exception(
+            status_code=500,
+            msg="Internal server error during reading logs",
+            _input={"lof_file_name": f"{config.get('LOG_FILE')}.log"},
+            _detail={"error": e.__str__()}
+        )
 
 
 app.include_router(effects_router)

@@ -1,5 +1,4 @@
 import sys
-from datetime import datetime
 
 from loguru import logger
 from iduconfig import Config
@@ -22,7 +21,7 @@ logger.add(
 config = Config()
 
 logger.add(
-    f"{config.get('LOGS_FILE')}.log",
+    ".log",
     format=log_format,
     level="INFO",
 )
