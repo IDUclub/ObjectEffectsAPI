@@ -22,7 +22,6 @@ class EffectsAPIGateway:
             territory_id: territory id to get normative from
             context_ids: context id to get normative from
             service_type_id: service to get normative from
-            year: year to get normative from
         Returns:
             dict[str, int | str]: normative data with normative value and normative type (Literal["time", "dist"])
         Raises:
@@ -41,8 +40,8 @@ class EffectsAPIGateway:
             request_ter_id = territory_id
         response_df = pd.DataFrame.from_records(response)
         response_df["service_type_id"] = response_df["service_type"].apply(lambda x: x["id"])
-        service_type = response_df[(response_df["year"] == response_df["year"].max()) & (
-                    response_df["service_type_id"] == service_type_id)].iloc[0].to_dict()
+        service_type = response_df[response_df["service_type_id"] == service_type_id].copy()
+        service_type = service_type[service_type["year"] == service_type["year"].max()].iloc[0].to_dict()
 
         if service_type["service_type"]["id"] == service_type_id:
             if not pd.isna(service_type["radius_availability_meters"]):
