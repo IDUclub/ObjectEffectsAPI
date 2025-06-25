@@ -1,9 +1,19 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, FileResponse
+from loguru import logger
 
 from .dependencies import config, http_exception
 from .effects.effects_controller import effects_router
+
+
+log_format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <b>{message}</b>"
+
+logger.add(
+    ".log",
+    format=log_format,
+    level="INFO",
+)
 
 
 app = FastAPI(
