@@ -225,7 +225,7 @@ class EffectsAPIGateway:
             }
         )
 
-        if (value := population[0]["value"]) < 1:
+        if len(population) < 1 or (value := population[0]["value"]) < 1:
             return None
         return value
 
