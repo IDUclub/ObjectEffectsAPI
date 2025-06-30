@@ -216,6 +216,7 @@ class EffectsService:
             normative_value=normative_data["normative_value"],
             normative_type=normative_data["normative_type"],
         )
+        before_services["capacity"] = before_services["capacity"].fillna(before_services["capacity"].mean())
         before_prove_data = await asyncio.to_thread(
             objectnat_calculator.evaluate_provision,
             buildings=before_buildings,
