@@ -58,7 +58,8 @@ class AttributeParser:
             gpd.GeoDataFrame: service capacity with parsed storeys data. Can be empty
         """
 
-        services["capacity"] = services["services"].apply(lambda x: x[0].get("capacity"))
+        services["capacity"] = services["services"].apply(lambda x: x[0].get("capacity")).astype(int)
+        services["capacity"] = services["capacity"].fillna(0)
         return services
 
     @staticmethod

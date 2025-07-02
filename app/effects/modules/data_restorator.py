@@ -77,6 +77,7 @@ class DataRestorator:
             living_buildings=buildings,
             population=int(target_population),
         )
+        balanced_buildings["population"] = balanced_buildings["population"].astype(int)
         return balanced_buildings.to_crs(4326)
 
     @staticmethod
