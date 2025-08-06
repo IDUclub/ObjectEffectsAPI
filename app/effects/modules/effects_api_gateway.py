@@ -130,12 +130,12 @@ class EffectsAPIGateway:
 
     @staticmethod
     async def get_project_context_buildings(
-            project_id: int,
+            scenario_id: int,
     ) -> gpd.GeoDataFrame:
         """
         Function retrieves scenario context buildings data from urban_api
         Args:
-            project_id: scenario id to get buildings from
+            scenario_id: scenario id to get buildings from
         Returns:
             gpd.GeoDataFrame: buildings layer
         Raises:
@@ -143,7 +143,7 @@ class EffectsAPIGateway:
         """
 
         context_buildings = await urban_api_handler.get(
-            endpoint_url=f"/api/v1/projects/{project_id}/context/geometries_with_all_objects",
+            endpoint_url=f"/api/v1/scenarios/{scenario_id}/context/geometries_with_all_objects",
             params={
                 "physical_object_type_id": 4,
             }
@@ -182,20 +182,20 @@ class EffectsAPIGateway:
 
     @staticmethod
     async def get_project_context_services(
-            project_id: int,
+            scenario_id: int,
             service_type_id: int,
     ) -> gpd.GeoDataFrame:
         """
         Function retrieves scenario context services data from urban_api
         Args:
-            project_id: scenario id to get services from
+            scenario_id: scenario id to get services from
             service_type_id: service to get services from
         Returns:
             gpd.GeoDataFrame: context services layer. Can be empty
         """
 
         context_services = await urban_api_handler.get(
-            endpoint_url=f"/api/v1/projects/{project_id}/context/geometries_with_all_objects",
+            endpoint_url=f"/api/v1/scenarios/{scenario_id}/context/geometries_with_all_objects",
             params={
                 "service_type_id": service_type_id,
             }
