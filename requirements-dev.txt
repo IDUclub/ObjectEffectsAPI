@@ -1,0 +1,15 @@
+aiohttp~=3.11.12
+fastapi~=0.115.8
+geopandas~=0.14.4
+IDU-config~=1.0.2
+loguru~=0.7.3
+numba~=0.60.0
+numpy~=1.26.4
+ObjectNat~=0.2.6
+pandas~=2.2.3
+pydantic~=2.10.6
+scipy~=1.15.1
+requests~=2.32.3
+uvicorn~=0.34.0
+gunicorn~=23.0.0
+requests~=2.32.5

@@ -199,7 +199,7 @@ class ObjectNatCalculator:
 
         provision_before[
             "supplyed_demands_without_before"
-        ] = provision_before["supplyed_demands_without"]
+        ] = provision_before["supplyed_demands_without"] + provision_before["supplyed_demands_within_before"]
 
         provision_before[
             "us_demands_without_before"
