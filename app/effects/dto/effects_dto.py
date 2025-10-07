@@ -11,5 +11,5 @@ class EffectsDTO(BaseModel):
     target_population: Optional[int] = Field(
         default=None,
         examples=[200],
-        description="Target population for project territory"
+        description="Target population for project territory",
     )

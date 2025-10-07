@@ -1,10 +1,7 @@
-import json
 import asyncio
 
-import pandas as pd
 import geopandas as gpd
-
-from app.dependencies import http_exception
+import pandas as pd
 
 
 class AttributeParser:
@@ -14,7 +11,7 @@ class AttributeParser:
 
     @staticmethod
     async def parse_all_from_buildings(
-            living_buildings: pd.DataFrame | gpd.GeoDataFrame,
+        living_buildings: pd.DataFrame | gpd.GeoDataFrame,
     ) -> gpd.GeoDataFrame:
         """
         Function purses living building area for buildings from nested response
@@ -34,21 +31,28 @@ class AttributeParser:
         if living_buildings["storeys_count"].isna().all():
             living_buildings["storeys_count"] = await asyncio.to_thread(
                 living_buildings["physical_objects"].apply,
-                lambda x: x[0].get("properties").get("Количество этажей")
+                lambda x: x[0].get("properties").get("Количество этажей"),
             )
         living_buildings["building_id"] = await asyncio.to_thread(
             living_buildings["physical_objects"].apply,
             lambda x: x[0]["physical_object_id"],
         )
         living_buildings = living_buildings.drop(
-            ['object_geometry_id', 'territory', 'address', 'osm_id', 'physical_objects', 'services'],
+            [
+                "object_geometry_id",
+                "territory",
+                "address",
+                "osm_id",
+                "physical_objects",
+                "services",
+            ],
             axis=1,
         )
         return living_buildings
 
     @staticmethod
     def _parse_service_capacity(
-            services:gpd.GeoDataFrame,
+        services: gpd.GeoDataFrame,
     ) -> gpd.GeoDataFrame:
         """
         Function parses capacity attributes from nested response
@@ -58,14 +62,14 @@ class AttributeParser:
             gpd.GeoDataFrame: service capacity with parsed storeys data. Can be empty
         """
 
-        services["capacity"] = services["services"].apply(lambda x: x[0].get("capacity")).astype(int)
+        services["capacity"] = (
+            services["services"].apply(lambda x: x[0].get("capacity")).astype(int)
+        )
         services["capacity"] = services["capacity"].fillna(0)
         return services
 
     @staticmethod
-    def _parse_service_id(
-            services: gpd.GeoDataFrame
-    ) -> gpd.GeoDataFrame:
+    def _parse_service_id(services: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         """
         Function parses service id from nested response
         Args:
@@ -74,12 +78,14 @@ class AttributeParser:
             gpd.GeoDataFrame: service id with parsed storeys data. Can be empty
         """
 
-        services["service_id"] = services["services"].apply(lambda x: x[0].get("service_id"))
+        services["service_id"] = services["services"].apply(
+            lambda x: x[0].get("service_id")
+        )
         return services
 
     async def parse_all_from_services(
-            self,
-            services: gpd.GeoDataFrame,
+        self,
+        services: gpd.GeoDataFrame,
     ) -> gpd.GeoDataFrame:
         """
         Function parses all required data from service request data
@@ -96,13 +102,20 @@ class AttributeParser:
             services=services,
         )
         services = await asyncio.to_thread(
-            self._parse_service_capacity,
-            services=services
+            self._parse_service_capacity, services=services
         )
         services = services.drop(
-            ['object_geometry_id', 'territory', 'address', 'osm_id', 'physical_objects', 'services'],
-            axis=1
+            [
+                "object_geometry_id",
+                "territory",
+                "address",
+                "osm_id",
+                "physical_objects",
+                "services",
+            ],
+            axis=1,
         )
         return services
+
 
 attribute_parser = AttributeParser()

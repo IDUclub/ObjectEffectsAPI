@@ -1,20 +1,20 @@
 import asyncio
 
-from shapely.geometry import shape
 import geopandas as gpd
-import numpy as np
 import pandas as pd
+from shapely.geometry import shape
 
-from app.dependencies import urban_api_handler, http_exception
+from app.common.exceptions.http_exception_wrapper import http_exception
+from app.dependencies import urban_api_handler
 
 
 class EffectsAPIGateway:
 
     @staticmethod
     async def get_service_normative(
-            territory_id: int,
-            context_ids: list[int],
-            service_type_id: int,
+        territory_id: int,
+        context_ids: list[int],
+        service_type_id: int,
     ) -> dict[str, int | str]:
         """
         Function retrieves normative data from urban_api
@@ -39,13 +39,37 @@ class EffectsAPIGateway:
             )
             request_ter_id = territory_id
         response_df = pd.DataFrame.from_records(response)
-        response_df["service_type_id"] = response_df["service_type"].apply(lambda x: x["id"])
-        service_type = response_df[response_df["service_type_id"] == service_type_id].copy()
-        service_type = service_type[service_type["year"] == service_type["year"].max()].iloc[0].to_dict()
+        response_df["service_type_id"] = response_df["service_type"].apply(
+            lambda x: x["id"]
+        )
+        service_type = response_df[
+            response_df["service_type_id"] == service_type_id
+        ].copy()
+        if len(service_type) < 1:
+            raise http_exception(
+                400,
+                msg="Service type id not found in urban_db for provided territory/context ids. ",
+                _input={
+                    "territory_id": territory_id,
+                    "context_ids": context_ids,
+                    "service_type_id": service_type_id,
+                },
+                _detail={
+                    "Available service ids": response_df["service_type_id"].to_list()
+                },
+            )
+
+        service_type = (
+            service_type[service_type["year"] == service_type["year"].max()]
+            .iloc[0]
+            .to_dict()
+        )
 
         if service_type["service_type"]["id"] == service_type_id:
             if not pd.isna(service_type["radius_availability_meters"]):
-                service_type["normative_value"] = service_type["radius_availability_meters"]
+                service_type["normative_value"] = service_type[
+                    "radius_availability_meters"
+                ]
                 service_type["normative_type"] = "dist"
                 if not pd.isna(service_type.get("services_per_1000_normative")):
                     service_type["capacity_type"] = "unit"
@@ -53,7 +77,9 @@ class EffectsAPIGateway:
                     service_type["capacity_type"] = "capacity"
                 return service_type
             elif not pd.isna(service_type["time_availability_minutes"]):
-                service_type["normative_value"] = service_type["time_availability_minutes"]
+                service_type["normative_value"] = service_type[
+                    "time_availability_minutes"
+                ]
                 service_type["normative_type"] = "time"
                 if not pd.isna(service_type.get("services_per_1000_normative")):
                     service_type["capacity_type"] = "unit"
@@ -71,7 +97,9 @@ class EffectsAPIGateway:
                         "service_type_id": service_type_id,
                     },
                     _detail={
-                        "Available service ids": [service_type["id"] for service_type in response]
+                        "Available service ids": [
+                            service_type["id"] for service_type in response
+                        ]
                     },
                 )
         raise http_exception(
@@ -83,9 +111,7 @@ class EffectsAPIGateway:
                 "request_ter_id": request_ter_id,
                 "service_type_id": service_type_id,
             },
-            _detail={
-                "Available service ids": response_df["service_type_id"].to_list()
-            },
+            _detail={"Available service ids": response_df["service_type_id"].to_list()},
         )
 
     @staticmethod
@@ -106,7 +132,7 @@ class EffectsAPIGateway:
 
     @staticmethod
     async def get_scenario_buildings(
-            scenario_id: int,
+        scenario_id: int,
     ) -> gpd.GeoDataFrame:
         """
         Function retrieves scenario buildings data from urban_api
@@ -118,9 +144,7 @@ class EffectsAPIGateway:
 
         buildings = await urban_api_handler.get(
             endpoint_url=f"/api/v1/scenarios/{scenario_id}/geometries_with_all_objects",
-            params={
-                "physical_object_type_id": 4
-            }
+            params={"physical_object_type_id": 4},
         )
         buildings_gdf = gpd.GeoDataFrame.from_features(buildings)
         if buildings_gdf.empty:
@@ -130,7 +154,7 @@ class EffectsAPIGateway:
 
     @staticmethod
     async def get_project_context_buildings(
-            scenario_id: int,
+        scenario_id: int,
     ) -> gpd.GeoDataFrame:
         """
         Function retrieves scenario context buildings data from urban_api
@@ -146,7 +170,7 @@ class EffectsAPIGateway:
             endpoint_url=f"/api/v1/scenarios/{scenario_id}/context/geometries_with_all_objects",
             params={
                 "physical_object_type_id": 4,
-            }
+            },
         )
         context_buildings_gdf = gpd.GeoDataFrame.from_features(context_buildings)
         if context_buildings_gdf.empty:
@@ -156,8 +180,8 @@ class EffectsAPIGateway:
 
     @staticmethod
     async def get_scenario_services(
-            scenario_id: int,
-            service_type_id: int,
+        scenario_id: int,
+        service_type_id: int,
     ) -> gpd.GeoDataFrame:
         """
         Function retrieves scenario services data from urban_api
@@ -172,7 +196,7 @@ class EffectsAPIGateway:
             endpoint_url=f"/api/v1/scenarios/{scenario_id}/geometries_with_all_objects",
             params={
                 "service_type_id": service_type_id,
-            }
+            },
         )
         services_gdf = gpd.GeoDataFrame.from_features(services)
         if services_gdf.empty:
@@ -182,8 +206,8 @@ class EffectsAPIGateway:
 
     @staticmethod
     async def get_project_context_services(
-            scenario_id: int,
-            service_type_id: int,
+        scenario_id: int,
+        service_type_id: int,
     ) -> gpd.GeoDataFrame:
         """
         Function retrieves scenario context services data from urban_api
@@ -198,7 +222,7 @@ class EffectsAPIGateway:
             endpoint_url=f"/api/v1/scenarios/{scenario_id}/context/geometries_with_all_objects",
             params={
                 "service_type_id": service_type_id,
-            }
+            },
         )
         context_services_gdf = gpd.GeoDataFrame.from_features(context_services)
         if context_services_gdf.empty:
@@ -207,9 +231,7 @@ class EffectsAPIGateway:
         return context_services_gdf
 
     @staticmethod
-    async def get_scenario_population_data(
-            scenario_id: int | None
-    ) -> int | None:
+    async def get_scenario_population_data(scenario_id: int | None) -> int | None:
         """
         Function retrieves population data from urban_api
         Args:
@@ -222,7 +244,7 @@ class EffectsAPIGateway:
             endpoint_url=f"/api/v1/scenarios/{scenario_id}/indicators_values",
             params={
                 "indicator_ids": 1,
-            }
+            },
         )
 
         if len(population) < 1 or (value := population[0]["value"]) < 1:
@@ -231,7 +253,7 @@ class EffectsAPIGateway:
 
     @staticmethod
     async def get_context_population(
-            territory_ids_list: list[int],
+        territory_ids_list: list[int],
     ) -> int:
         """
         Function retrieves territory population data from urban_api by territory id
@@ -241,12 +263,13 @@ class EffectsAPIGateway:
             gpd.GeoDataFrame: territory population data layer
         """
 
-        task_list = [urban_api_handler.get(
-            endpoint_url=f"/api/v1/territory/{territory_id}/indicator_values",
-            params={
-                "indicator_ids": 1
-            }
-        ) for territory_id in territory_ids_list]
+        task_list = [
+            urban_api_handler.get(
+                endpoint_url=f"/api/v1/territory/{territory_id}/indicator_values",
+                params={"indicator_ids": 1},
+            )
+            for territory_id in territory_ids_list
+        ]
 
         result = await asyncio.gather(*task_list)
         return sum([item[0]["value"] for item in result])
@@ -264,7 +287,10 @@ class EffectsAPIGateway:
         territory = await urban_api_handler.get(
             endpoint_url=f"/api/v1/projects/{project_id}/territory",
         )
-        territory_gdf = gpd.GeoDataFrame(geometry=[shape(territory["geometry"])], crs=4326)
+        territory_gdf = gpd.GeoDataFrame(
+            geometry=[shape(territory["geometry"])], crs=4326
+        )
         return territory_gdf
+
 
 effects_api_gateway = EffectsAPIGateway()
