@@ -21,4 +21,4 @@ async def calculate_effects(
     scenario ID: Scenario ID
     """
 
-    return await effects_service.handle_effects_calculation(params)
+    return await effects_service.calculate_effects(params)
