@@ -12,9 +12,7 @@ class EffectsAPIGateway:
 
     @staticmethod
     async def get_service_normative(
-        territory_id: int,
-        context_ids: list[int],
-        service_type_id: int,
+        territory_id: int, context_ids: list[int], service_type_id: int, token: str
     ) -> dict[str, int | str]:
         """
         Function retrieves normative data from urban_api
@@ -22,6 +20,7 @@ class EffectsAPIGateway:
             territory_id: territory id to get normative from
             context_ids: context id to get normative from
             service_type_id: service to get normative from
+            token: auth token to get normative from
         Returns:
             dict[str, int | str]: normative data with normative value and normative type (Literal["time", "dist"])
         Raises:
@@ -31,11 +30,13 @@ class EffectsAPIGateway:
         if len(context_ids) == 1:
             response = await urban_api_handler.get(
                 f"/api/v1/territory/{context_ids[0]}/normatives",
+                headers={"Authorization": f"Bearer {token}"} if token else None,
             )
             request_ter_id = context_ids[0]
         else:
             response = await urban_api_handler.get(
                 f"/api/v1/territory/{territory_id}/normatives",
+                headers={"Authorization": f"Bearer {token}"} if token else None,
             )
             request_ter_id = territory_id
         response_df = pd.DataFrame.from_records(response)
@@ -115,29 +116,30 @@ class EffectsAPIGateway:
         )
 
     @staticmethod
-    async def get_project_data(project_id: int) -> dict[str, int | dict]:
+    async def get_project_data(project_id: int, token: str) -> dict[str, int | dict]:
         """
         Function retrieves project territory data from urban_api
         Args:
             project_id: project id to get territory from
+            token: authentication token to retrieve data
         Returns:
             dict with "geometry" field as dict with "type" and "coordinates" fields and field "base_scenario_id"
         """
 
         response = await urban_api_handler.get(
             endpoint_url=f"/api/v1/projects/{project_id}",
+            headers={"Authorization": f"Bearer {token}"} if token else None,
         )
 
         return response
 
     @staticmethod
-    async def get_scenario_buildings(
-        scenario_id: int,
-    ) -> gpd.GeoDataFrame:
+    async def get_scenario_buildings(scenario_id: int, token: str) -> gpd.GeoDataFrame:
         """
         Function retrieves scenario buildings data from urban_api
         Args:
             scenario_id: scenario id to get buildings from
+            token: authentication token to retrieve data
         Returns:
             gpd.GeoDataFrame: buildings layer, can be empty
         """
@@ -145,6 +147,7 @@ class EffectsAPIGateway:
         buildings = await urban_api_handler.get(
             endpoint_url=f"/api/v1/scenarios/{scenario_id}/geometries_with_all_objects",
             params={"physical_object_type_id": 4},
+            headers={"Authorization": f"Bearer {token}"} if token else None,
         )
         buildings_gdf = gpd.GeoDataFrame.from_features(buildings)
         if buildings_gdf.empty:
@@ -154,12 +157,13 @@ class EffectsAPIGateway:
 
     @staticmethod
     async def get_project_context_buildings(
-        scenario_id: int,
+        scenario_id: int, token: str
     ) -> gpd.GeoDataFrame:
         """
         Function retrieves scenario context buildings data from urban_api
         Args:
             scenario_id: scenario id to get buildings from
+            token: Authorization token to retrieve data
         Returns:
             gpd.GeoDataFrame: buildings layer
         Raises:
@@ -171,6 +175,7 @@ class EffectsAPIGateway:
             params={
                 "physical_object_type_id": 4,
             },
+            headers={"Authorization": f"Bearer {token}"} if token else None,
         )
         context_buildings_gdf = gpd.GeoDataFrame.from_features(context_buildings)
         if context_buildings_gdf.empty:
@@ -180,14 +185,14 @@ class EffectsAPIGateway:
 
     @staticmethod
     async def get_scenario_services(
-        scenario_id: int,
-        service_type_id: int,
+        scenario_id: int, service_type_id: int, token: str
     ) -> gpd.GeoDataFrame:
         """
         Function retrieves scenario services data from urban_api
         Args:
             scenario_id: scenario id to get services from
             service_type_id: service to get services from
+            token: Authorization token to retrieve data
         Returns:
             gpd.GeoDataFrame: services layer, can be empty
         """
@@ -197,6 +202,7 @@ class EffectsAPIGateway:
             params={
                 "service_type_id": service_type_id,
             },
+            headers={"Authorization": f"Bearer {token}"} if token else None,
         )
         services_gdf = gpd.GeoDataFrame.from_features(services)
         if services_gdf.empty:
@@ -208,12 +214,14 @@ class EffectsAPIGateway:
     async def get_project_context_services(
         scenario_id: int,
         service_type_id: int,
+        token: str,
     ) -> gpd.GeoDataFrame:
         """
         Function retrieves scenario context services data from urban_api
         Args:
             scenario_id: scenario id to get services from
             service_type_id: service to get services from
+            token: Authorization token to retrieve data
         Returns:
             gpd.GeoDataFrame: context services layer. Can be empty
         """
@@ -223,6 +231,7 @@ class EffectsAPIGateway:
             params={
                 "service_type_id": service_type_id,
             },
+            headers={"Authorization": f"Bearer {token}"} if token else None,
         )
         context_services_gdf = gpd.GeoDataFrame.from_features(context_services)
         if context_services_gdf.empty:
@@ -231,11 +240,14 @@ class EffectsAPIGateway:
         return context_services_gdf
 
     @staticmethod
-    async def get_scenario_population_data(scenario_id: int | None) -> int | None:
+    async def get_scenario_population_data(
+        scenario_id: int | None, token: str
+    ) -> int | None:
         """
         Function retrieves population data from urban_api
         Args:
             scenario_id: scenario id to get population data from
+            token: Authorization token to retrieve data
         Returns:
             int | none: population data layer, if < 1 returns None
         """
@@ -245,6 +257,7 @@ class EffectsAPIGateway:
             params={
                 "indicator_ids": 1,
             },
+            headers={"Authorization": f"Bearer {token}"} if token else None,
         )
 
         if len(population) < 1 or (value := population[0]["value"]) < 1:
@@ -252,13 +265,12 @@ class EffectsAPIGateway:
         return value
 
     @staticmethod
-    async def get_context_population(
-        territory_ids_list: list[int],
-    ) -> int:
+    async def get_context_population(territory_ids_list: list[int], token: str) -> int:
         """
         Function retrieves territory population data from urban_api by territory id
         Args:
             territory_ids_list: list[int]: territory ids list to get population data from
+            token: Authorization token to retrieve data
         Returns:
             gpd.GeoDataFrame: territory population data layer
         """
@@ -267,6 +279,7 @@ class EffectsAPIGateway:
             urban_api_handler.get(
                 endpoint_url=f"/api/v1/territory/{territory_id}/indicator_values",
                 params={"indicator_ids": 1},
+                headers={"Authorization": f"Bearer {token}"} if token else None,
             )
             for territory_id in territory_ids_list
         ]
@@ -275,17 +288,19 @@ class EffectsAPIGateway:
         return sum([item[0]["value"] for item in result])
 
     @staticmethod
-    async def get_project_territory(project_id: int) -> gpd.GeoDataFrame:
+    async def get_project_territory(project_id: int, token: str) -> gpd.GeoDataFrame:
         """
         Function retrieves territory data from urban_api
         Args:
             project_id: project id to get territory data from
+            token: Authorization token to retrieve data
         Returns:
             gpd.GeoDataFrame: territory data layer
         """
 
         territory = await urban_api_handler.get(
             endpoint_url=f"/api/v1/projects/{project_id}/territory",
+            headers={"Authorization": f"Bearer {token}"} if token else None,
         )
         territory_gdf = gpd.GeoDataFrame(
             geometry=[shape(territory["geometry"])], crs=4326
