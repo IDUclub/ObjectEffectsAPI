@@ -77,11 +77,14 @@ class EffectsService:
     # ToDo Add population retrievement by year
     # ToDo Split function
     # ToDo Rewrite to context ids normal handling
-    async def calculate_effects(self, effects_params: EffectsDTO) -> EffectsSchema:
+    async def calculate_effects(
+        self, effects_params: EffectsDTO, token: str
+    ) -> EffectsSchema:
         """
         Calculate provision effects by project data and target scenario
         Args:
             effects_params (EffectsDTO): Project data
+            token (str): Authorization token
         Returns:
              gpd.GeoDataFrame: Provision effects
         """
@@ -90,21 +93,22 @@ class EffectsService:
             f"Started calculating effects for {effects_params.scenario_id} and service{effects_params.service_type_id}"
         )
         project_data = await effects_api_gateway.get_project_data(
-            effects_params.project_id
+            effects_params.project_id, token
         )
         project_territory = await effects_api_gateway.get_project_territory(
-            effects_params.project_id
+            effects_params.project_id, token
         )
         normative_data = await effects_api_gateway.get_service_normative(
             territory_id=project_data["territory"]["id"],
             context_ids=project_data["properties"]["context"],
             service_type_id=effects_params.service_type_id,
+            token=token,
         )
         context_population = await effects_api_gateway.get_context_population(
-            territory_ids_list=project_data["properties"]["context"]
+            territory_ids_list=project_data["properties"]["context"], token=token
         )
         context_buildings = await effects_api_gateway.get_project_context_buildings(
-            scenario_id=project_data["base_scenario"]["id"],
+            scenario_id=project_data["base_scenario"]["id"], token=token
         )
         context_buildings.drop(
             index=context_buildings.sjoin(project_territory).index, inplace=True
@@ -123,6 +127,7 @@ class EffectsService:
         context_services = await effects_api_gateway.get_project_context_services(
             scenario_id=project_data["base_scenario"]["id"],
             service_type_id=effects_params.service_type_id,
+            token=token,
         )
         if context_services.empty:
             # ToDo Revise to another code
@@ -137,11 +142,11 @@ class EffectsService:
         )
         target_scenario_population = (
             await effects_api_gateway.get_scenario_population_data(
-                scenario_id=effects_params.scenario_id,
+                scenario_id=effects_params.scenario_id, token=token
             )
         )
         target_scenario_buildings = await effects_api_gateway.get_scenario_buildings(
-            scenario_id=effects_params.scenario_id
+            scenario_id=effects_params.scenario_id, token=token
         )
         target_scenario_buildings = await attribute_parser.parse_all_from_buildings(
             living_buildings=target_scenario_buildings,
@@ -157,12 +162,13 @@ class EffectsService:
         target_scenario_services = await effects_api_gateway.get_scenario_services(
             scenario_id=effects_params.scenario_id,
             service_type_id=effects_params.service_type_id,
+            token=token,
         )
         target_scenario_services = await attribute_parser.parse_all_from_services(
             services=target_scenario_services,
         )
         base_scenario_buildings = await effects_api_gateway.get_scenario_buildings(
-            scenario_id=project_data["base_scenario"]["id"]
+            scenario_id=project_data["base_scenario"]["id"], token=token
         )
         base_scenario_buildings = await attribute_parser.parse_all_from_buildings(
             living_buildings=base_scenario_buildings,
@@ -177,6 +183,7 @@ class EffectsService:
         base_scenario_services = await effects_api_gateway.get_scenario_services(
             scenario_id=project_data["base_scenario"]["id"],
             service_type_id=effects_params.service_type_id,
+            token=token,
         )
         base_scenario_services = await attribute_parser.parse_all_from_services(
             services=base_scenario_services,
