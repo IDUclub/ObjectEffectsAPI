@@ -205,11 +205,17 @@ class EffectsService:
         after_buildings.drop_duplicates("building_id", keep="first", inplace=True)
         after_buildings.set_index("building_id", inplace=True)
         after_services.set_index("service_id", inplace=True)
+        after_services = after_services[
+            ~after_services.index.duplicated(keep="first")
+        ].copy()
         before_buildings.sort_values("is_project", ascending=False, inplace=True)
         before_buildings.drop_duplicates("building_id", keep="first", inplace=True)
         before_buildings.set_index("building_id", inplace=True)
         before_services.set_index("service_id", inplace=True)
         before_services.drop_duplicates("geometry", inplace=True)
+        before_services = before_services[
+            ~before_services.index.duplicated(keep="first")
+        ].copy()
         if target_scenario_buildings.empty:
             local_crs = context_buildings.estimate_utm_crs()
         else:
@@ -240,14 +246,14 @@ class EffectsService:
         before_prove_data = await asyncio.to_thread(
             objectnat_calculator.evaluate_provision,
             buildings=before_buildings,
-            services=before_services,
+            services=before_services[~before_services.index.duplicated(keep="first")],
             matrix=before_matrix,
             service_normative=normative_data["normative_value"],
         )
         after_prove_data = await asyncio.to_thread(
             objectnat_calculator.evaluate_provision,
             buildings=after_buildings,
-            services=after_services,
+            services=after_services[~after_services.index.duplicated(keep="first")],
             matrix=after_matrix,
             service_normative=normative_data["normative_value"],
         )
