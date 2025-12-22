@@ -321,7 +321,9 @@ class EffectsAPIGateway:
             endpoint_url="/api/v1/service_types"
         )
         service_types_df = pd.DataFrame.from_records(service_types).fillna(0)
-        return service_types_df[service_types_df["service_type_id"] == service_type_id].iloc[0]["capacity_modeled"]
+        return service_types_df[
+            service_types_df["service_type_id"] == service_type_id
+        ].iloc[0]["capacity_modeled"]
 
 
 effects_api_gateway = EffectsAPIGateway()
