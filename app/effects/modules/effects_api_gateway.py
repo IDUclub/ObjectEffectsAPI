@@ -41,7 +41,7 @@ class EffectsAPIGateway:
             request_ter_id = territory_id
         response_df = pd.DataFrame.from_records(response)
         response_df["service_type_id"] = response_df["service_type"].apply(
-            lambda x: x["id"]
+            lambda x: x["id"] if x else None
         )
         service_type = response_df[
             response_df["service_type_id"] == service_type_id
@@ -306,6 +306,24 @@ class EffectsAPIGateway:
             geometry=[shape(territory["geometry"])], crs=4326
         )
         return territory_gdf
+
+    @staticmethod
+    async def get_default_capacity(service_type_id: int) -> int:
+        """
+        Function retrieves default capacity data from urban_api
+        Args:
+            service_type_id (int): service type id to get default capacity data from
+        Returns:
+            int: default capacity value
+        """
+
+        service_types = await urban_api_handler.get(
+            endpoint_url="/api/v1/service_types"
+        )
+        service_types_df = pd.DataFrame.from_records(service_types).fillna(0)
+        return service_types_df[
+            service_types_df["service_type_id"] == service_type_id
+        ].iloc[0]["capacity_modeled"]
 
 
 effects_api_gateway = EffectsAPIGateway()
