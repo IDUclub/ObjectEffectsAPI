@@ -53,19 +53,20 @@ class AttributeParser:
     @staticmethod
     def _parse_service_capacity(
         services: gpd.GeoDataFrame,
+        service_default_capacity: int
     ) -> gpd.GeoDataFrame:
         """
         Function parses capacity attributes from nested response
         Args:
             services (gpd.GeoDataFrame): nested response from api as feature collection
+            service_default_capacity (int): default capacity to fill
         Returns:
             gpd.GeoDataFrame: service capacity with parsed storeys data. Can be empty
         """
 
         services["capacity"] = (
-            services["services"].apply(lambda x: x[0].get("capacity")).astype(int)
+            services["services"].apply(lambda x: x[0].get("capacity")).fillna(service_default_capacity).astype(int)
         )
-        services["capacity"] = services["capacity"].fillna(0)
         return services
 
     @staticmethod
@@ -86,14 +87,17 @@ class AttributeParser:
     async def parse_all_from_services(
         self,
         services: gpd.GeoDataFrame,
+        service_default_capacity: int
     ) -> gpd.GeoDataFrame:
         """
         Function parses all required data from service request data
         Args:
             services (gpd.GeoDataFrame): nested response from api as feature collection
+            service_default_capacity(int): service default capacity value
         Returns:
             gpd.GeoDataFrame: service capacity with parsed storeys data. Can be empty
         """
+
         services = services.copy()
         if services.empty:
             return services
@@ -102,7 +106,7 @@ class AttributeParser:
             services=services,
         )
         services = await asyncio.to_thread(
-            self._parse_service_capacity, services=services
+            self._parse_service_capacity, services=services, service_default_capacity=service_default_capacity
         )
         services = services.drop(
             [

@@ -16,6 +16,7 @@ from .modules import (
     objectnat_calculator,
 )
 from .shemas.effects_base_schema import EffectsSchema
+from ..dependencies import urban_api_handler
 
 
 class EffectsService:
@@ -98,6 +99,7 @@ class EffectsService:
         project_territory = await effects_api_gateway.get_project_territory(
             effects_params.project_id, token
         )
+        service_default_capacity = await effects_api_gateway.get_default_capacity(service_type_id=effects_params.service_type_id)
         normative_data = await effects_api_gateway.get_service_normative(
             territory_id=project_data["territory"]["id"],
             context_ids=project_data["properties"]["context"],
@@ -139,6 +141,7 @@ class EffectsService:
             )
         context_services = await attribute_parser.parse_all_from_services(
             services=context_services,
+            service_default_capacity=service_default_capacity
         )
         target_scenario_population = (
             await effects_api_gateway.get_scenario_population_data(
@@ -166,6 +169,7 @@ class EffectsService:
         )
         target_scenario_services = await attribute_parser.parse_all_from_services(
             services=target_scenario_services,
+            service_default_capacity=service_default_capacity
         )
         base_scenario_buildings = await effects_api_gateway.get_scenario_buildings(
             scenario_id=project_data["base_scenario"]["id"], token=token
@@ -187,6 +191,7 @@ class EffectsService:
         )
         base_scenario_services = await attribute_parser.parse_all_from_services(
             services=base_scenario_services,
+            service_default_capacity=service_default_capacity
         )
         after_buildings = await asyncio.to_thread(
             pd.concat, objs=[context_buildings, target_scenario_buildings]

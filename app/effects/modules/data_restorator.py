@@ -152,5 +152,9 @@ class DataRestorator:
                 _detail={"available_demand_type": ["unit", "capacity"]},
             )
 
+        def restore_capacity(services: gpd.GeoDataFrame, service_capacity_normative: int) -> gpd.GeoDataFrame:
+
+            services["capacity"] = service_capacity_normative
+
 
 data_restorator = DataRestorator()
