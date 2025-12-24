@@ -7,9 +7,12 @@ from loguru import logger
 
 from app.common.exceptions.http_exception_wrapper import http_exception
 
-from ..dependencies import urban_api_handler
 from .dto.effects_dto import EffectsDTO
 from .modules import (
+    ATTRIBUTES_MAP,
+    BUILDINGS_DROP_COLUMNS,
+    EFFECTS_MAP,
+    SERVICE_DROP_COLUMNS,
     attribute_parser,
     data_restorator,
     effects_api_gateway,
@@ -276,23 +279,87 @@ class EffectsService:
         result = {
             "before_prove_data": {
                 "buildings": json.loads(
-                    before_prove_data["buildings"].to_crs(4326).to_json()
+                    before_prove_data["buildings"]
+                    .rename(
+                        columns={
+                            k: v
+                            for k, v in ATTRIBUTES_MAP.items()
+                            if k in before_prove_data["buildings"].columns
+                        }
+                    )
+                    .drop(columns=BUILDINGS_DROP_COLUMNS)
+                    .to_crs(4326)
+                    .to_json()
                 ),
                 "services": json.loads(
-                    before_prove_data["services"].to_crs(4326).to_json()
+                    before_prove_data["services"]
+                    .rename(
+                        columns={
+                            k: v
+                            for k, v in ATTRIBUTES_MAP.items()
+                            if k in before_prove_data["services"].columns
+                        }
+                    )
+                    .drop(columns=SERVICE_DROP_COLUMNS)
+                    .to_crs(4326)
+                    .to_json()
                 ),
-                "links": json.loads(before_prove_data["links"].to_crs(4326).to_json()),
+                "links": json.loads(
+                    before_prove_data["links"]
+                    .rename(
+                        columns={
+                            k: v
+                            for k, v in ATTRIBUTES_MAP.items()
+                            if k in before_prove_data["links"].columns
+                        }
+                    )
+                    .to_crs(4326)
+                    .to_json()
+                ),
             },
             "after_prove_data": {
                 "buildings": json.loads(
-                    after_prove_data["buildings"].to_crs(4326).to_json()
+                    after_prove_data["buildings"]
+                    .rename(
+                        columns={
+                            k: v
+                            for k, v in ATTRIBUTES_MAP.items()
+                            if k in after_prove_data["buildings"].columns
+                        }
+                    )
+                    .drop(columns=BUILDINGS_DROP_COLUMNS)
+                    .to_crs(4326)
+                    .to_json()
                 ),
                 "services": json.loads(
-                    after_prove_data["services"].to_crs(4326).to_json()
+                    after_prove_data["services"]
+                    .rename(
+                        columns={
+                            k: v
+                            for k, v in ATTRIBUTES_MAP.items()
+                            if k in after_prove_data["services"].columns
+                        }
+                    )
+                    .drop(columns=SERVICE_DROP_COLUMNS)
+                    .to_crs(4326)
+                    .to_json()
                 ),
-                "links": json.loads(after_prove_data["links"].to_crs(4326).to_json()),
+                "links": json.loads(
+                    after_prove_data["links"]
+                    .rename(
+                        columns={
+                            k: v
+                            for k, v in ATTRIBUTES_MAP.items()
+                            if k in after_prove_data["links"].columns
+                        }
+                    )
+                    .to_crs(4326)
+                    .to_json()
+                ),
             },
-            "effects": json.loads(effects.to_crs(4326).to_json()),
+            "effects": json.loads(
+                effects.rename(columns=EFFECTS_MAP).to_crs(4326).to_json()
+            ),
             "pivot": pivot,
         }
         return EffectsSchema(**result)
