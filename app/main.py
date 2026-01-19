@@ -1,11 +1,16 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from loguru import logger
 
+from .__version__ import APP_VERSION
 from .common.exceptions.exception_handler import ExceptionHandlerMiddleware
 from .dependencies import config, http_exception
 from .effects.effects_controller import effects_router
+from .observability import OpenTelemetryAgent, PrometheusConfig
+from .observability.metrics import setup_metrics
 
 log_format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <b>{message}</b>"
 
@@ -16,10 +21,25 @@ logger.add(
 )
 
 
+@asynccontextmanager
+async def lifespan():
+    otel_agent = OpenTelemetryAgent(
+        prometheus_config=PrometheusConfig(
+            host="0.0.0.0",
+            port=int(config.get("PROMETHEUS_PORT")),
+        ),
+    )
+    setup_metrics()
+    logger.info(f"Prometheus server started on {config.get('PROMETHEUS_PORT')}")
+    yield
+    otel_agent.shutdown()
+    logger.info("Prometheus server was shut down")
+
+
 app = FastAPI(
     title="ObjectNat effects API",
     description="API for calculating effects for territory by ObjectNat library",
-    version=config.get("APP_VERSION"),
+    version=APP_VERSION,
 )
 
 # Add CORS middleware
