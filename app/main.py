@@ -6,7 +6,8 @@ from fastapi.responses import FileResponse, RedirectResponse
 from loguru import logger
 
 from .__version__ import APP_VERSION
-from .common.exceptions.exception_handler import ExceptionHandlerMiddleware
+from .common.middlewares.exception_handler import ExceptionHandlerMiddleware
+from .common.middlewares.prometheus_handler import ObservabilityMiddleware
 from .dependencies import config, http_exception
 from .effects.effects_controller import effects_router
 from .observability import OpenTelemetryAgent, PrometheusConfig
@@ -19,6 +20,8 @@ logger.add(
     format=log_format,
     level="INFO",
 )
+
+metrics = setup_metrics()
 
 
 @asynccontextmanager
@@ -50,7 +53,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.add_middleware(ExceptionHandlerMiddleware)
+app.add_middleware(ExceptionHandlerMiddleware, metrics=metrics)
+app.add_middleware(ObservabilityMiddleware, metrics=metrics)
 
 
 @app.get("/", response_model=dict[str, str])

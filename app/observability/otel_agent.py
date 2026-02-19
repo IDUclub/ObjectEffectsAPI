@@ -23,7 +23,7 @@ from .metrics_server import PrometheusServer
 def get_resource() -> Resource:
     return Resource.create(
         attributes={
-            SERVICE_NAME: "Sirtep API",
+            SERVICE_NAME: "sirtep-api",
             SERVICE_VERSION: APP_VERSION,
             SERVICE_INSTANCE_ID: platform.node(),
         }
