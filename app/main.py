@@ -25,7 +25,7 @@ metrics = setup_metrics()
 
 
 @asynccontextmanager
-async def lifespan():
+async def lifespan(app: FastAPI):
     otel_agent = OpenTelemetryAgent(
         prometheus_config=PrometheusConfig(
             host="0.0.0.0",
@@ -43,6 +43,7 @@ app = FastAPI(
     title="ObjectNat effects API",
     description="API for calculating effects for territory by ObjectNat library",
     version=APP_VERSION,
+    lifespan=lifespan,
 )
 
 # Add CORS middleware
