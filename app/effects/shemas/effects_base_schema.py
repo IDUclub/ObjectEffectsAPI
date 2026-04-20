@@ -60,3 +60,4 @@ class EffectsSchema(BaseModel):
     after_prove_data: ProvisionSchema
     effects: FeatureCollectionSchema
     pivot: PivotSchema
+    text_pivot: str | None = None

@@ -82,13 +82,14 @@ class EffectsService:
     # ToDo Split function
     # ToDo Rewrite to context ids normal handling
     async def calculate_effects(
-        self, effects_params: EffectsDTO, token: str
+        self, effects_params: EffectsDTO, token: str, for_mcp: bool = False
     ) -> EffectsSchema:
         """
         Calculate provision effects by project data and target scenario
         Args:
             effects_params (EffectsDTO): Project data
             token (str): Authorization token
+            for_mcp (bool): If flag enabled adds string description for llm. Default to false.
         Returns:
              gpd.GeoDataFrame: Provision effects
         """
@@ -362,7 +363,34 @@ class EffectsService:
             ),
             "pivot": pivot,
         }
+        if for_mcp:
+            result["text_pivot"] = await self.form_llm_context(
+                before_prove_data["buildings"],
+                after_prove_data["buildings"],
+                before_prove_data["services"],
+                after_prove_data["services"],
+            )
         return EffectsSchema(**result)
+
+    async def form_llm_context(
+        self,
+        buildings_before: gpd.GeoDataFrame,
+        buildings_after: gpd.GeoDataFrame,
+        services_before: gpd.GeoDataFrame,
+        services_after: gpd.GeoDataFrame,
+    ) -> str:
+        """
+        Function forms text repr stats from calculated provision data for llm.
+        Args:
+            buildings_before (gpd.GeoDataFrame): Buildings provision layers before.
+            buildings_after (gpd.GeoDataFrame): Buildings provision layers after.
+            services_before (gpd.GeoDataFrame): Services provision layers before.
+            services_after (gpd.GeoDataFrame): Services provision layers after.
+        Returns:
+            str: Text representation for formed stats in json string.
+        """
+
+        {""}
 
 
 effects_service = EffectsService()
