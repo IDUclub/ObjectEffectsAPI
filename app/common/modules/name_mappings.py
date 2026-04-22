@@ -25,6 +25,7 @@ ATTRIBUTES_MAP = {
     "us_demands_within_after": "Неудовлетворённый спрос в нормативной доступности (после) (чел)",
     "supplyed_demands_without_after": "Удовлетворённый спрос вне нормативной доступности (после) (чел)",
     "us_demands_without_after": "Неудовлетворённый спрос вне нормативной доступности (после) (чел)",
+    "is_scenario_object": "Сценарный объект",
 }
 
 EFFECTS_MAP = {
@@ -37,5 +38,5 @@ EFFECTS_MAP = {
     "is_project": "Проектный объект",
 }
 
-SERVICE_DROP_COLUMNS = ["is_scenario_object", "is_locked"]
+SERVICE_DROP_COLUMNS = ["is_locked"]
 BUILDINGS_DROP_COLUMNS = SERVICE_DROP_COLUMNS + ["is_project"]

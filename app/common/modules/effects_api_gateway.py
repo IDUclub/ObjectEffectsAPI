@@ -325,5 +325,53 @@ class EffectsAPIGateway:
             service_types_df["service_type_id"] == service_type_id
         ].iloc[0]["capacity_modeled"]
 
+    @staticmethod
+    async def get_services_with_context(
+        scenario_id: int, service_type_id: int, token: str | None = None
+    ) -> gpd.GeoDataFrame:
+        """
+        Function retrieves service by service_type_id for scenario ID from urban api with context.
+        Args:
+            scenario_id (int): Scenario ID from Urban API.
+            service_type_id (int): Service type ID from Urban API.
+            token (str | None): Auth token to retrieve data from Urban API. Default to None
+        Returns:
+             gpd.GeoDataFrame: layer with services in 4326 crs.
+        """
+
+        services = await urban_api_handler.get(
+            endpoint_url=f"/api/v1/scenarios/{scenario_id}/context/services_with_geometry",
+            params={
+                "service_type_id": service_type_id,
+                "include_scenario_objects": True,
+            },
+            headers={"Authorization": f"Bearer {token}"} if token else None,
+        )
+        return gpd.GeoDataFrame.from_features(services, crs=4326)
+
+    @staticmethod
+    async def get_physical_objects_with_context(
+        scenario_id: int, physical_object_type_id: int, token: str | None = None
+    ):
+        """
+        Function retrieves physical objects by physical_object_type_id for scenario ID from urban api with context.
+        Args:
+            scenario_id (int): Scenario ID from Urban API.
+            physical_object_type_id (int): Physical object type ID from Urban API.
+            token (str | None): Auth token to retrieve data from Urban API. Default to None
+        Returns:
+             gpd.GeoDataFrame: layer with physical_objects in 4326 crs.
+        """
+
+        physical_objects = await urban_api_handler.get(
+            endpoint_url=f"/api/v1/scenarios/{scenario_id}/context/services_with_geometry",
+            params={
+                "physical_object_type_id": physical_object_type_id,
+                "include_scenario_objects": True,
+            },
+            headers={"Authorization": f"Bearer {token}"} if token else None,
+        )
+        return gpd.GeoDataFrame.from_features(physical_objects, crs=4326)
+
 
 effects_api_gateway = EffectsAPIGateway()

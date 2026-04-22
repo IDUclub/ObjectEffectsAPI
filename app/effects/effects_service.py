@@ -6,9 +6,7 @@ import pandas as pd
 from loguru import logger
 
 from app.common.exceptions.http_exception_wrapper import http_exception
-
-from .dto.effects_dto import EffectsDTO
-from .modules import (
+from app.common.modules import (
     ATTRIBUTES_MAP,
     BUILDINGS_DROP_COLUMNS,
     EFFECTS_MAP,
@@ -19,6 +17,8 @@ from .modules import (
     matrix_builder,
     objectnat_calculator,
 )
+from app.dto.provision_dto import ProvisionDTO
+
 from .shemas.effects_base_schema import EffectsSchema
 
 
@@ -82,13 +82,14 @@ class EffectsService:
     # ToDo Split function
     # ToDo Rewrite to context ids normal handling
     async def calculate_effects(
-        self, effects_params: EffectsDTO, token: str
+        self, effects_params: ProvisionDTO, token: str, for_mcp: bool = False
     ) -> EffectsSchema:
         """
         Calculate provision effects by project data and target scenario
         Args:
-            effects_params (EffectsDTO): Project data
+            effects_params (ProvisionDTO): Project data
             token (str): Authorization token
+            for_mcp (bool): If flag enabled adds string description for llm. Default to false.
         Returns:
              gpd.GeoDataFrame: Provision effects
         """
@@ -362,7 +363,393 @@ class EffectsService:
             ),
             "pivot": pivot,
         }
+        if for_mcp:
+            result["text_pivot"] = await self.form_llm_context(
+                before_prove_data["buildings"],
+                after_prove_data["buildings"],
+                before_prove_data["services"],
+                after_prove_data["services"],
+            )
         return EffectsSchema(**result)
+
+    @staticmethod
+    async def form_llm_context(
+        before_buildings: gpd.GeoDataFrame,
+        after_buildings: gpd.GeoDataFrame,
+        before_services: gpd.GeoDataFrame,
+        after_services: gpd.GeoDataFrame,
+    ) -> str:
+        """
+        Function forms text repr stats from calculated provision data for llm.
+        Args:
+            before_buildings (gpd.GeoDataFrame): Buildings provision layers before.
+            after_buildings (gpd.GeoDataFrame): Buildings provision layers after.
+            before_services (gpd.GeoDataFrame): Services provision layers before.
+            after_services (gpd.GeoDataFrame): Services provision layers after.
+        Returns:
+            str: Text representation for formed stats in json string.
+        """
+
+        before_buildings_all = before_buildings.copy()
+        after_buildings_all = after_buildings.copy()
+        before_services_all = before_services.copy()
+        after_services_all = after_services.copy()
+        before_buildings_context = before_buildings[
+            before_buildings["is_scenario_object"] == False
+        ]
+        after_buildings_context = after_buildings[
+            after_buildings["is_scenario_object"] == False
+        ]
+        before_services_context = before_services[
+            before_services["is_scenario_object"] == False
+        ]
+        after_services_context = after_services[
+            after_services["is_scenario_object"] == False
+        ]
+        before_buildings_project = before_buildings[
+            before_buildings["is_scenario_object"] == True
+        ]
+        after_buildings_project = after_buildings[
+            after_buildings["is_scenario_object"] == True
+        ]
+        before_services_project = before_services[
+            before_services["is_scenario_object"] == True
+        ]
+        after_services_project = after_services[
+            after_services["is_scenario_object"] == True
+        ]
+        all_provision_before = int(
+            before_buildings_all[
+                "Удовлетворённый спрос вне нормативной доступности (до) (чел)"
+            ].sum()
+        )
+        all_provision_after = int(
+            after_buildings_all[
+                "Удовлетворённый спрос вне нормативной доступности (после) (чел)"
+            ].sum()
+        )
+        all_provision_within_before = int(
+            before_buildings_all[
+                "Удовлетворённый спрос в нормативной доступности (до) (чел)"
+            ].sum()
+        )
+        all_provision_within_after = int(
+            after_buildings_all[
+                "Удовлетворённый спрос в нормативной доступности (после) (чел)"
+            ].sum()
+        )
+        all_provision_without_before = int(
+            before_buildings_all[
+                "Удовлетворённый спрос вне нормативной доступности (до) (чел)"
+            ].sum()
+        )
+        all_provision_without_after = int(
+            after_buildings_all[
+                "Удовлетворённый спрос вне нормативной доступности (после) (чел)"
+            ].sum()
+        )
+        all_total_capacity_before = int(before_services_all["Вместимость (чел)"].sum())
+        all_total_capacity_after = int(after_services_all["Вместимость (чел)"].sum())
+        all_demand_before = int(before_buildings_all["Спрос (чел)"].sum())
+        all_demand_after = int(after_buildings_all["Спрос (чел)"].sum())
+        all_unmet_demand_before = int(
+            before_buildings_all["Неудовлетворённый спрос (чел)"].sum()
+        )
+        all_unmet_demand_after = int(
+            after_buildings_all["Неудовлетворённый спрос (чел)"].sum()
+        )
+        all_unmet_demand_within_before = int(
+            before_buildings_all[
+                "Неудовлетворённый спрос в нормативной доступности (до) (чел)"
+            ].sum()
+        )
+        all_unmet_demand_within_after = int(
+            after_buildings_all[
+                "Неудовлетворённый спрос в нормативной доступности (после) (чел)"
+            ].sum()
+        )
+        all_unmet_demand_without_before = int(
+            before_buildings_all[
+                "Неудовлетворённый спрос вне нормативной доступности (до) (чел)"
+            ].sum()
+        )
+        all_unmet_demand_without_after = int(
+            after_buildings_all[
+                "Неудовлетворённый спрос вне нормативной доступности (после) (чел)"
+            ].sum()
+        )
+        all_balance_before = all_total_capacity_before - all_demand_before
+        all_balance_after = all_total_capacity_after - all_demand_after
+        all_deficit_before = min(0, all_balance_before)
+        all_deficit_after = min(0, all_balance_after)
+        all_surplus_before = max(0, all_balance_before)
+        all_surplus_after = max(0, all_balance_after)
+        context_provision_before = int(
+            before_buildings_context[
+                "Удовлетворённый спрос вне нормативной доступности (до) (чел)"
+            ].sum()
+        )
+        context_provision_after = int(
+            after_buildings_context[
+                "Удовлетворённый спрос вне нормативной доступности (после) (чел)"
+            ].sum()
+        )
+        context_provision_within_before = int(
+            before_buildings_context[
+                "Удовлетворённый спрос в нормативной доступности (до) (чел)"
+            ].sum()
+        )
+        context_provision_within_after = int(
+            after_buildings_context[
+                "Удовлетворённый спрос в нормативной доступности (после) (чел)"
+            ].sum()
+        )
+        context_provision_without_before = int(
+            before_buildings_context[
+                "Удовлетворённый спрос вне нормативной доступности (до) (чел)"
+            ].sum()
+        )
+        context_provision_without_after = int(
+            after_buildings_context[
+                "Удовлетворённый спрос вне нормативной доступности (после) (чел)"
+            ].sum()
+        )
+        context_total_capacity_before = int(
+            before_services_context["Вместимость (чел)"].sum()
+        )
+        context_total_capacity_after = int(
+            after_services_context["Вместимость (чел)"].sum()
+        )
+        context_demand_before = int(before_buildings_context["Спрос (чел)"].sum())
+        context_demand_after = int(after_buildings_context["Спрос (чел)"].sum())
+        context_unmet_demand_before = int(
+            before_buildings_context["Неудовлетворённый спрос (чел)"].sum()
+        )
+        context_unmet_demand_after = int(
+            after_buildings_context["Неудовлетворённый спрос (чел)"].sum()
+        )
+        context_unmet_demand_within_before = int(
+            before_buildings_context[
+                "Неудовлетворённый спрос в нормативной доступности (до) (чел)"
+            ].sum()
+        )
+        context_unmet_demand_within_after = int(
+            after_buildings_context[
+                "Неудовлетворённый спрос в нормативной доступности (после) (чел)"
+            ].sum()
+        )
+        context_unmet_demand_without_before = int(
+            before_buildings_context[
+                "Неудовлетворённый спрос вне нормативной доступности (до) (чел)"
+            ].sum()
+        )
+        context_unmet_demand_without_after = int(
+            after_buildings_context[
+                "Неудовлетворённый спрос вне нормативной доступности (после) (чел)"
+            ].sum()
+        )
+        context_balance_before = context_total_capacity_before - context_demand_before
+        context_balance_after = context_total_capacity_after - context_demand_after
+        context_deficit_before = min(0, context_balance_before)
+        context_deficit_after = min(0, context_balance_after)
+        context_surplus_before = max(0, context_balance_before)
+        context_surplus_after = max(0, context_balance_after)
+        project_provision_before = int(
+            before_buildings_project[
+                "Удовлетворённый спрос вне нормативной доступности (до) (чел)"
+            ].sum()
+        )
+        project_provision_after = int(
+            after_buildings_project[
+                "Удовлетворённый спрос вне нормативной доступности (после) (чел)"
+            ].sum()
+        )
+        project_provision_within_before = int(
+            before_buildings_project[
+                "Удовлетворённый спрос в нормативной доступности (до) (чел)"
+            ].sum()
+        )
+        project_provision_within_after = int(
+            after_buildings_project[
+                "Удовлетворённый спрос в нормативной доступности (после) (чел)"
+            ].sum()
+        )
+        project_provision_without_before = int(
+            before_buildings_project[
+                "Удовлетворённый спрос вне нормативной доступности (до) (чел)"
+            ].sum()
+        )
+        project_provision_without_after = int(
+            after_buildings_project[
+                "Удовлетворённый спрос вне нормативной доступности (после) (чел)"
+            ].sum()
+        )
+        project_total_capacity_before = int(
+            before_services_project["Вместимость (чел)"].sum()
+        )
+        project_total_capacity_after = int(
+            after_services_project["Вместимость (чел)"].sum()
+        )
+        project_demand_before = int(before_buildings_project["Спрос (чел)"].sum())
+        project_demand_after = int(after_buildings_project["Спрос (чел)"].sum())
+        project_unmet_demand_before = int(
+            before_buildings_project["Неудовлетворённый спрос (чел)"].sum()
+        )
+        project_unmet_demand_after = int(
+            after_buildings_project["Неудовлетворённый спрос (чел)"].sum()
+        )
+        project_unmet_demand_within_before = int(
+            before_buildings_project[
+                "Неудовлетворённый спрос в нормативной доступности (до) (чел)"
+            ].sum()
+        )
+        project_unmet_demand_within_after = int(
+            after_buildings_project[
+                "Неудовлетворённый спрос в нормативной доступности (после) (чел)"
+            ].sum()
+        )
+        project_unmet_demand_without_before = int(
+            before_buildings_project[
+                "Неудовлетворённый спрос вне нормативной доступности (до) (чел)"
+            ].sum()
+        )
+        project_unmet_demand_without_after = int(
+            after_buildings_project[
+                "Неудовлетворённый спрос вне нормативной доступности (после) (чел)"
+            ].sum()
+        )
+        project_balance_before = project_total_capacity_before - project_demand_before
+        project_balance_after = project_total_capacity_after - project_demand_after
+        project_deficit_before = min(0, project_balance_before)
+        project_deficit_after = min(0, project_balance_after)
+        project_surplus_before = max(0, project_balance_before)
+        project_surplus_after = max(0, project_balance_after)
+
+        result = {
+            "all": {
+                "provision_before": all_provision_before,
+                "provision_after": all_provision_after,
+                "provision_delta": all_provision_after - all_provision_before,
+                "provision_within_before": all_provision_within_before,
+                "provision_within_after": all_provision_within_after,
+                "provision_within_delta": all_provision_within_after
+                - all_provision_within_before,
+                "provision_without_before": all_provision_without_before,
+                "provision_without_after": all_provision_without_after,
+                "provision_without_delta": all_provision_without_after
+                - all_provision_without_before,
+                "total_capacity_before": all_total_capacity_before,
+                "total_capacity_after": all_total_capacity_after,
+                "total_capacity_delta": all_total_capacity_after
+                - all_total_capacity_before,
+                "balance_before": all_balance_before,
+                "balance_after": all_balance_after,
+                "balance_delta": all_balance_after - all_balance_before,
+                "deficit_before": all_deficit_before,
+                "deficit_after": all_deficit_after,
+                "deficit_delta": all_deficit_after - all_deficit_before,
+                "surplus_before": all_surplus_before,
+                "surplus_after": all_surplus_after,
+                "surplus_delta": all_surplus_after - all_surplus_before,
+                "demand_before": all_demand_before,
+                "demand_after": all_demand_after,
+                "demand_delta": all_demand_after - all_demand_before,
+                "unmet_demand_before": all_unmet_demand_before,
+                "unmet_demand_after": all_unmet_demand_after,
+                "unmet_demand_delta": all_unmet_demand_after - all_unmet_demand_before,
+                "unmet_demand_within_before": all_unmet_demand_within_before,
+                "unmet_demand_within_after": all_unmet_demand_within_after,
+                "unmet_demand_within_delta": all_unmet_demand_within_after
+                - all_unmet_demand_within_before,
+                "unmet_demand_without_before": all_unmet_demand_without_before,
+                "unmet_demand_without_after": all_unmet_demand_without_after,
+                "unmet_demand_without_delta": all_unmet_demand_without_after
+                - all_unmet_demand_without_before,
+            },
+            "context": {
+                "provision_before": context_provision_before,
+                "provision_after": context_provision_after,
+                "provision_delta": context_provision_after - context_provision_before,
+                "provision_within_before": context_provision_within_before,
+                "provision_within_after": context_provision_within_after,
+                "provision_within_delta": context_provision_within_after
+                - context_provision_within_before,
+                "provision_without_before": context_provision_without_before,
+                "provision_without_after": context_provision_without_after,
+                "provision_without_delta": context_provision_without_after
+                - context_provision_without_before,
+                "total_capacity_before": context_total_capacity_before,
+                "total_capacity_after": context_total_capacity_after,
+                "total_capacity_delta": context_total_capacity_after
+                - context_total_capacity_before,
+                "balance_before": context_balance_before,
+                "balance_after": context_balance_after,
+                "balance_delta": context_balance_after - context_balance_before,
+                "deficit_before": context_deficit_before,
+                "deficit_after": context_deficit_after,
+                "deficit_delta": context_deficit_after - context_deficit_before,
+                "surplus_before": context_surplus_before,
+                "surplus_after": context_surplus_after,
+                "surplus_delta": context_surplus_after - context_surplus_before,
+                "demand_before": context_demand_before,
+                "demand_after": context_demand_after,
+                "demand_delta": context_demand_after - context_demand_before,
+                "unmet_demand_before": context_unmet_demand_before,
+                "unmet_demand_after": context_unmet_demand_after,
+                "unmet_demand_delta": context_unmet_demand_after
+                - context_unmet_demand_before,
+                "unmet_demand_within_before": context_unmet_demand_within_before,
+                "unmet_demand_within_after": context_unmet_demand_within_after,
+                "unmet_demand_within_delta": context_unmet_demand_within_after
+                - context_unmet_demand_within_before,
+                "unmet_demand_without_before": context_unmet_demand_without_before,
+                "unmet_demand_without_after": context_unmet_demand_without_after,
+                "unmet_demand_without_delta": context_unmet_demand_without_after
+                - context_unmet_demand_without_before,
+            },
+            "project": {
+                "provision_before": project_provision_before,
+                "provision_after": project_provision_after,
+                "provision_delta": project_provision_after - project_provision_before,
+                "provision_within_before": project_provision_within_before,
+                "provision_within_after": project_provision_within_after,
+                "provision_within_delta": project_provision_within_after
+                - project_provision_within_before,
+                "provision_without_before": project_provision_without_before,
+                "provision_without_after": project_provision_without_after,
+                "provision_without_delta": project_provision_without_after
+                - project_provision_without_before,
+                "total_capacity_before": project_total_capacity_before,
+                "total_capacity_after": project_total_capacity_after,
+                "total_capacity_delta": project_total_capacity_after
+                - project_total_capacity_before,
+                "balance_before": project_balance_before,
+                "balance_after": project_balance_after,
+                "balance_delta": project_balance_after - project_balance_before,
+                "deficit_before": project_deficit_before,
+                "deficit_after": project_deficit_after,
+                "deficit_delta": project_deficit_after - project_deficit_before,
+                "surplus_before": project_surplus_before,
+                "surplus_after": project_surplus_after,
+                "surplus_delta": project_surplus_after - project_surplus_before,
+                "demand_before": project_demand_before,
+                "demand_after": project_demand_after,
+                "demand_delta": project_demand_after - project_demand_before,
+                "unmet_demand_before": project_unmet_demand_before,
+                "unmet_demand_after": project_unmet_demand_after,
+                "unmet_demand_delta": project_unmet_demand_after
+                - project_unmet_demand_before,
+                "unmet_demand_within_before": project_unmet_demand_within_before,
+                "unmet_demand_within_after": project_unmet_demand_within_after,
+                "unmet_demand_within_delta": project_unmet_demand_within_after
+                - project_unmet_demand_within_before,
+                "unmet_demand_without_before": project_unmet_demand_without_before,
+                "unmet_demand_without_after": project_unmet_demand_without_after,
+                "unmet_demand_without_delta": project_unmet_demand_without_after
+                - project_unmet_demand_without_before,
+            },
+        }
+        return json.dumps(result)
 
 
 effects_service = EffectsService()
