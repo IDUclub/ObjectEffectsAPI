@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
+from fastmcp.utilities.lifespan import combine_lifespans
 from loguru import logger
 
 from .__version__ import APP_VERSION
@@ -10,8 +11,10 @@ from .common.middlewares.exception_handler import ExceptionHandlerMiddleware
 from .common.middlewares.prometheus_handler import ObservabilityMiddleware
 from .dependencies import config, http_exception
 from .effects.effects_controller import effects_router
+from .mcp import effects_mcp_app
 from .observability import OpenTelemetryAgent, PrometheusConfig
 from .observability.metrics import setup_metrics
+from .provision.provision_controller import provision_router
 
 log_format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <b>{message}</b>"
 
@@ -43,8 +46,9 @@ app = FastAPI(
     title="ObjectNat effects API",
     description="API for calculating effects for territory by ObjectNat library",
     version=APP_VERSION,
-    lifespan=lifespan,
+    lifespan=combine_lifespans(lifespan, effects_mcp_app.lifespan),
 )
+app.mount("/effects", effects_mcp_app)
 
 # Add CORS middleware
 app.add_middleware(
@@ -97,3 +101,4 @@ async def get_logs():
 
 
 app.include_router(effects_router)
+app.include_router(provision_router)

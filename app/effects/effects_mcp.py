@@ -1,7 +1,7 @@
 from fastmcp import FastMCP
 from fastmcp.server.dependencies import CurrentContext, get_access_token
 
-from app.effects.dto.effects_dto import EffectsDTO
+from app.dto.provision_dto import ProvisionDTO
 
 from .effects_service import effects_service
 
@@ -45,14 +45,14 @@ effects_mcp = FastMCP("Object Effects MCP server")
         }
     """,
 )
-async def calc_provision(
+async def calc_provision_effects(
     service_type_id: int, target_population: int | None = None, ctx=CurrentContext()
 ):
 
     project_id = int(ctx.request_context.meta.project_id)
     scenario_id = int(ctx.request_context.meta.scenario_id)
     token = get_access_token()
-    effects_dto = EffectsDTO(
+    effects_dto = ProvisionDTO(
         project_id=project_id,
         scenario_id=scenario_id,
         service_type_id=service_type_id,
