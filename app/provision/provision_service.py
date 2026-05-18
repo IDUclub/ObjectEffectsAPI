@@ -6,12 +6,12 @@ from loguru import logger
 
 from app.common.exceptions.http_exception_wrapper import http_exception
 from app.common.modules import (
+    EffectsAPIGateway,
     attribute_parser,
     data_restorator,
     matrix_builder,
     objectnat_calculator,
 )
-from app.common.modules.effects_api_gateway import effects_api_gateway
 from app.dto.provision_dto import ProvisionDTO
 from app.schemas.provision_base_schema import ProvisionSchema
 
@@ -20,12 +20,11 @@ LIVING_BUILDINGS_ID = 4
 
 class ProvisionService:
 
-    def __init__(self):
-        pass
+    def __init__(self, gateway: EffectsAPIGateway) -> None:
+        self.gateway = gateway
 
-    @staticmethod
     async def calculate_provision(
-        provision_params: ProvisionDTO, token: str
+        self, provision_params: ProvisionDTO, token: str
     ) -> ProvisionSchema:
         """
         Calculate provision effects by project data and target scenario
@@ -39,25 +38,25 @@ class ProvisionService:
         logger.info(
             f"Started calculating effects for {provision_params.scenario_id} and service{provision_params.service_type_id}"
         )
-        project_data = await effects_api_gateway.get_project_data(
+        project_data = await self.gateway.get_project_data(
             provision_params.project_id, token
         )
-        project_territory = await effects_api_gateway.get_project_territory(
+        project_territory = await self.gateway.get_project_territory(
             provision_params.project_id, token
         )
-        service_default_capacity = await effects_api_gateway.get_default_capacity(
+        service_default_capacity = await self.gateway.get_default_capacity(
             service_type_id=provision_params.service_type_id
         )
-        normative_data = await effects_api_gateway.get_service_normative(
+        normative_data = await self.gateway.get_service_normative(
             territory_id=project_data["territory"]["id"],
             context_ids=project_data["properties"]["context"],
             service_type_id=provision_params.service_type_id,
             token=token,
         )
-        context_population = await effects_api_gateway.get_context_population(
+        context_population = await self.gateway.get_context_population(
             territory_ids_list=project_data["properties"]["context"], token=token
         )
-        context_buildings = await effects_api_gateway.get_project_context_buildings(
+        context_buildings = await self.gateway.get_project_context_buildings(
             scenario_id=project_data["base_scenario"]["id"], token=token
         )
         context_buildings.drop(
@@ -74,7 +73,7 @@ class ProvisionService:
             target_population=context_population,
         )
         context_buildings["is_project"] = False
-        context_services = await effects_api_gateway.get_project_context_services(
+        context_services = await self.gateway.get_project_context_services(
             scenario_id=project_data["base_scenario"]["id"],
             service_type_id=provision_params.service_type_id,
             token=token,
@@ -90,12 +89,10 @@ class ProvisionService:
         context_services = await attribute_parser.parse_all_from_services(
             services=context_services, service_default_capacity=service_default_capacity
         )
-        target_scenario_population = (
-            await effects_api_gateway.get_scenario_population_data(
-                scenario_id=provision_params.scenario_id, token=token
-            )
+        target_scenario_population = await self.gateway.get_scenario_population_data(
+            scenario_id=provision_params.scenario_id, token=token
         )
-        target_scenario_buildings = await effects_api_gateway.get_scenario_buildings(
+        target_scenario_buildings = await self.gateway.get_scenario_buildings(
             scenario_id=provision_params.scenario_id, token=token
         )
         target_scenario_buildings = await attribute_parser.parse_all_from_buildings(
@@ -109,7 +106,7 @@ class ProvisionService:
             target_population=target_scenario_population,
         )
         target_scenario_buildings["is_project"] = True
-        target_scenario_services = await effects_api_gateway.get_scenario_services(
+        target_scenario_services = await self.gateway.get_scenario_services(
             scenario_id=provision_params.scenario_id,
             service_type_id=provision_params.service_type_id,
             token=token,
@@ -161,6 +158,3 @@ class ProvisionService:
             f"Calculated PROVISION for {provision_params.scenario_id} and {provision_params.service_type_id}"
         )
         return ProvisionSchema(**result)
-
-
-provision_service = ProvisionService()

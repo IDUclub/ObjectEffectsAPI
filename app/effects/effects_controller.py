@@ -3,9 +3,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from app.common.auth.bearer import verify_bearer_token
+from app.dependencies import effects_service
 from app.dto.provision_dto import ProvisionDTO
 
-from .effects_service import effects_service
 from .shemas.effects_base_schema import EffectsSchema
 
 effects_router = APIRouter(prefix="/effects")

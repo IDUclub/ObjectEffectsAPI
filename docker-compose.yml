@@ -7,7 +7,7 @@ services:
       context: .
       dockerfile: ./Dockerfile
     env_file:
-      - .env.example
+      - .env.development
     ports:
       - "8080:80"
       - "9464:9464"

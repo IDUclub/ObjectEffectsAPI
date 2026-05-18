@@ -48,7 +48,11 @@ app = FastAPI(
     version=APP_VERSION,
     lifespan=combine_lifespans(lifespan, effects_mcp_app.lifespan),
 )
-app.mount("/effects", effects_mcp_app)
+
+app.include_router(effects_router)
+app.include_router(provision_router)
+
+app.mount("/effects/mcp", effects_mcp_app)
 
 # Add CORS middleware
 app.add_middleware(
@@ -98,7 +102,3 @@ async def get_logs():
             _input={"log_file_name": ".log"},
             _detail={"error": e.__str__()},
         )
-
-
-app.include_router(effects_router)
-app.include_router(provision_router)
