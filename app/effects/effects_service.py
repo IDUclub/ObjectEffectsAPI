@@ -11,9 +11,9 @@ from app.common.modules import (
     BUILDINGS_DROP_COLUMNS,
     EFFECTS_MAP,
     SERVICE_DROP_COLUMNS,
+    EffectsAPIGateway,
     attribute_parser,
     data_restorator,
-    effects_api_gateway,
     matrix_builder,
     objectnat_calculator,
 )
@@ -26,6 +26,9 @@ class EffectsService:
     """
     Class for handling services calculation
     """
+
+    def __init__(self, gateway: EffectsAPIGateway) -> None:
+        self.gateway = gateway
 
     @staticmethod
     async def _get_pivot(
@@ -97,25 +100,25 @@ class EffectsService:
         logger.info(
             f"Started calculating effects for {effects_params.scenario_id} and service{effects_params.service_type_id}"
         )
-        project_data = await effects_api_gateway.get_project_data(
+        project_data = await self.gateway.get_project_data(
             effects_params.project_id, token
         )
-        project_territory = await effects_api_gateway.get_project_territory(
+        project_territory = await self.gateway.get_project_territory(
             effects_params.project_id, token
         )
-        service_default_capacity = await effects_api_gateway.get_default_capacity(
+        service_default_capacity = await self.gateway.get_default_capacity(
             service_type_id=effects_params.service_type_id
         )
-        normative_data = await effects_api_gateway.get_service_normative(
+        normative_data = await self.gateway.get_service_normative(
             territory_id=project_data["territory"]["id"],
             context_ids=project_data["properties"]["context"],
             service_type_id=effects_params.service_type_id,
             token=token,
         )
-        context_population = await effects_api_gateway.get_context_population(
+        context_population = await self.gateway.get_context_population(
             territory_ids_list=project_data["properties"]["context"], token=token
         )
-        context_buildings = await effects_api_gateway.get_project_context_buildings(
+        context_buildings = await self.gateway.get_project_context_buildings(
             scenario_id=project_data["base_scenario"]["id"], token=token
         )
         context_buildings.drop(
@@ -132,7 +135,7 @@ class EffectsService:
             target_population=context_population,
         )
         context_buildings["is_project"] = False
-        context_services = await effects_api_gateway.get_project_context_services(
+        context_services = await self.gateway.get_project_context_services(
             scenario_id=project_data["base_scenario"]["id"],
             service_type_id=effects_params.service_type_id,
             token=token,
@@ -148,12 +151,10 @@ class EffectsService:
         context_services = await attribute_parser.parse_all_from_services(
             services=context_services, service_default_capacity=service_default_capacity
         )
-        target_scenario_population = (
-            await effects_api_gateway.get_scenario_population_data(
-                scenario_id=effects_params.scenario_id, token=token
-            )
+        target_scenario_population = await self.gateway.get_scenario_population_data(
+            scenario_id=effects_params.scenario_id, token=token
         )
-        target_scenario_buildings = await effects_api_gateway.get_scenario_buildings(
+        target_scenario_buildings = await self.gateway.get_scenario_buildings(
             scenario_id=effects_params.scenario_id, token=token
         )
         target_scenario_buildings = await attribute_parser.parse_all_from_buildings(
@@ -167,7 +168,7 @@ class EffectsService:
             target_population=target_scenario_population,
         )
         target_scenario_buildings["is_project"] = True
-        target_scenario_services = await effects_api_gateway.get_scenario_services(
+        target_scenario_services = await self.gateway.get_scenario_services(
             scenario_id=effects_params.scenario_id,
             service_type_id=effects_params.service_type_id,
             token=token,
@@ -176,7 +177,7 @@ class EffectsService:
             services=target_scenario_services,
             service_default_capacity=service_default_capacity,
         )
-        base_scenario_buildings = await effects_api_gateway.get_scenario_buildings(
+        base_scenario_buildings = await self.gateway.get_scenario_buildings(
             scenario_id=project_data["base_scenario"]["id"], token=token
         )
         base_scenario_buildings = await attribute_parser.parse_all_from_buildings(
@@ -189,7 +190,7 @@ class EffectsService:
             service_normative_type=normative_data["capacity_type"],
         )
         base_scenario_buildings["is_project"] = True
-        base_scenario_services = await effects_api_gateway.get_scenario_services(
+        base_scenario_services = await self.gateway.get_scenario_services(
             scenario_id=project_data["base_scenario"]["id"],
             service_type_id=effects_params.service_type_id,
             token=token,
@@ -825,6 +826,3 @@ class EffectsService:
             },
         }
         return json.dumps(result)
-
-
-effects_service = EffectsService()

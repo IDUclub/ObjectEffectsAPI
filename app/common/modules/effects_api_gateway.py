@@ -4,15 +4,21 @@ import geopandas as gpd
 import pandas as pd
 from shapely.geometry import shape
 
+from app.common.api_handler.api_handler import APIHandler
 from app.common.exceptions.http_exception_wrapper import http_exception
-from app.dependencies import urban_api_handler
 
 
 class EffectsAPIGateway:
 
-    @staticmethod
+    def __init__(self, api_handler: APIHandler) -> None:
+        self.api_handler = api_handler
+
     async def get_service_normative(
-        territory_id: int, context_ids: list[int], service_type_id: int, token: str
+        self,
+        territory_id: int,
+        context_ids: list[int],
+        service_type_id: int,
+        token: str,
     ) -> dict[str, int | str]:
         """
         Function retrieves normative data from urban_api
@@ -28,13 +34,13 @@ class EffectsAPIGateway:
         """
 
         if len(context_ids) == 1:
-            response = await urban_api_handler.get(
+            response = await self.api_handler.get(
                 f"/api/v1/territory/{context_ids[0]}/normatives",
                 headers={"Authorization": f"Bearer {token}"} if token else None,
             )
             request_ter_id = context_ids[0]
         else:
-            response = await urban_api_handler.get(
+            response = await self.api_handler.get(
                 f"/api/v1/territory/{territory_id}/normatives",
                 headers={"Authorization": f"Bearer {token}"} if token else None,
             )
@@ -115,8 +121,9 @@ class EffectsAPIGateway:
             _detail={"Available service ids": response_df["service_type_id"].to_list()},
         )
 
-    @staticmethod
-    async def get_project_data(project_id: int, token: str) -> dict[str, int | dict]:
+    async def get_project_data(
+        self, project_id: int, token: str
+    ) -> dict[str, int | dict]:
         """
         Function retrieves project territory data from urban_api
         Args:
@@ -126,15 +133,16 @@ class EffectsAPIGateway:
             dict with "geometry" field as dict with "type" and "coordinates" fields and field "base_scenario_id"
         """
 
-        response = await urban_api_handler.get(
+        response = await self.api_handler.get(
             endpoint_url=f"/api/v1/projects/{project_id}",
             headers={"Authorization": f"Bearer {token}"} if token else None,
         )
 
         return response
 
-    @staticmethod
-    async def get_scenario_buildings(scenario_id: int, token: str) -> gpd.GeoDataFrame:
+    async def get_scenario_buildings(
+        self, scenario_id: int, token: str
+    ) -> gpd.GeoDataFrame:
         """
         Function retrieves scenario buildings data from urban_api
         Args:
@@ -144,7 +152,7 @@ class EffectsAPIGateway:
             gpd.GeoDataFrame: buildings layer, can be empty
         """
 
-        buildings = await urban_api_handler.get(
+        buildings = await self.api_handler.get(
             endpoint_url=f"/api/v1/scenarios/{scenario_id}/geometries_with_all_objects",
             params={"physical_object_type_id": 4},
             headers={"Authorization": f"Bearer {token}"} if token else None,
@@ -155,9 +163,8 @@ class EffectsAPIGateway:
         buildings_gdf.set_crs(4326, inplace=True)
         return buildings_gdf
 
-    @staticmethod
     async def get_project_context_buildings(
-        scenario_id: int, token: str
+        self, scenario_id: int, token: str
     ) -> gpd.GeoDataFrame:
         """
         Function retrieves scenario context buildings data from urban_api
@@ -170,7 +177,7 @@ class EffectsAPIGateway:
             404, http exception living buildings not found
         """
 
-        context_buildings = await urban_api_handler.get(
+        context_buildings = await self.api_handler.get(
             endpoint_url=f"/api/v1/scenarios/{scenario_id}/context/geometries_with_all_objects",
             params={
                 "physical_object_type_id": 4,
@@ -183,9 +190,8 @@ class EffectsAPIGateway:
         context_buildings_gdf.set_crs(4326, inplace=True)
         return context_buildings_gdf
 
-    @staticmethod
     async def get_scenario_services(
-        scenario_id: int, service_type_id: int, token: str
+        self, scenario_id: int, service_type_id: int, token: str
     ) -> gpd.GeoDataFrame:
         """
         Function retrieves scenario services data from urban_api
@@ -197,7 +203,7 @@ class EffectsAPIGateway:
             gpd.GeoDataFrame: services layer, can be empty
         """
 
-        services = await urban_api_handler.get(
+        services = await self.api_handler.get(
             endpoint_url=f"/api/v1/scenarios/{scenario_id}/geometries_with_all_objects",
             params={
                 "service_type_id": service_type_id,
@@ -210,8 +216,8 @@ class EffectsAPIGateway:
         services_gdf.set_crs(4326, inplace=True)
         return services_gdf
 
-    @staticmethod
     async def get_project_context_services(
+        self,
         scenario_id: int,
         service_type_id: int,
         token: str,
@@ -226,7 +232,7 @@ class EffectsAPIGateway:
             gpd.GeoDataFrame: context services layer. Can be empty
         """
 
-        context_services = await urban_api_handler.get(
+        context_services = await self.api_handler.get(
             endpoint_url=f"/api/v1/scenarios/{scenario_id}/context/geometries_with_all_objects",
             params={
                 "service_type_id": service_type_id,
@@ -239,9 +245,8 @@ class EffectsAPIGateway:
         context_services_gdf.set_crs(4326, inplace=True)
         return context_services_gdf
 
-    @staticmethod
     async def get_scenario_population_data(
-        scenario_id: int | None, token: str
+        self, scenario_id: int | None, token: str
     ) -> int | None:
         """
         Function retrieves population data from urban_api
@@ -252,7 +257,7 @@ class EffectsAPIGateway:
             int | none: population data layer, if < 1 returns None
         """
 
-        population = await urban_api_handler.get(
+        population = await self.api_handler.get(
             endpoint_url=f"/api/v1/scenarios/{scenario_id}/indicators_values",
             params={
                 "indicator_ids": 1,
@@ -264,8 +269,9 @@ class EffectsAPIGateway:
             return None
         return value
 
-    @staticmethod
-    async def get_context_population(territory_ids_list: list[int], token: str) -> int:
+    async def get_context_population(
+        self, territory_ids_list: list[int], token: str
+    ) -> int:
         """
         Function retrieves territory population data from urban_api by territory id
         Args:
@@ -276,7 +282,7 @@ class EffectsAPIGateway:
         """
 
         task_list = [
-            urban_api_handler.get(
+            self.api_handler.get(
                 endpoint_url=f"/api/v1/territory/{territory_id}/indicator_values",
                 params={"indicator_ids": 1},
                 headers={"Authorization": f"Bearer {token}"} if token else None,
@@ -287,8 +293,9 @@ class EffectsAPIGateway:
         result = await asyncio.gather(*task_list)
         return sum([item[0]["value"] for item in result])
 
-    @staticmethod
-    async def get_project_territory(project_id: int, token: str) -> gpd.GeoDataFrame:
+    async def get_project_territory(
+        self, project_id: int, token: str
+    ) -> gpd.GeoDataFrame:
         """
         Function retrieves territory data from urban_api
         Args:
@@ -298,7 +305,7 @@ class EffectsAPIGateway:
             gpd.GeoDataFrame: territory data layer
         """
 
-        territory = await urban_api_handler.get(
+        territory = await self.api_handler.get(
             endpoint_url=f"/api/v1/projects/{project_id}/territory",
             headers={"Authorization": f"Bearer {token}"} if token else None,
         )
@@ -307,8 +314,7 @@ class EffectsAPIGateway:
         )
         return territory_gdf
 
-    @staticmethod
-    async def get_default_capacity(service_type_id: int) -> int:
+    async def get_default_capacity(self, service_type_id: int) -> int:
         """
         Function retrieves default capacity data from urban_api
         Args:
@@ -317,17 +323,14 @@ class EffectsAPIGateway:
             int: default capacity value
         """
 
-        service_types = await urban_api_handler.get(
-            endpoint_url="/api/v1/service_types"
-        )
+        service_types = await self.api_handler.get(endpoint_url="/api/v1/service_types")
         service_types_df = pd.DataFrame.from_records(service_types).fillna(0)
         return service_types_df[
             service_types_df["service_type_id"] == service_type_id
         ].iloc[0]["capacity_modeled"]
 
-    @staticmethod
     async def get_services_with_context(
-        scenario_id: int, service_type_id: int, token: str | None = None
+        self, scenario_id: int, service_type_id: int, token: str | None = None
     ) -> gpd.GeoDataFrame:
         """
         Function retrieves service by service_type_id for scenario ID from urban api with context.
@@ -339,7 +342,7 @@ class EffectsAPIGateway:
              gpd.GeoDataFrame: layer with services in 4326 crs.
         """
 
-        services = await urban_api_handler.get(
+        services = await self.api_handler.get(
             endpoint_url=f"/api/v1/scenarios/{scenario_id}/context/services_with_geometry",
             params={
                 "service_type_id": service_type_id,
@@ -349,9 +352,8 @@ class EffectsAPIGateway:
         )
         return gpd.GeoDataFrame.from_features(services, crs=4326)
 
-    @staticmethod
     async def get_physical_objects_with_context(
-        scenario_id: int, physical_object_type_id: int, token: str | None = None
+        self, scenario_id: int, physical_object_type_id: int, token: str | None = None
     ):
         """
         Function retrieves physical objects by physical_object_type_id for scenario ID from urban api with context.
@@ -363,7 +365,7 @@ class EffectsAPIGateway:
              gpd.GeoDataFrame: layer with physical_objects in 4326 crs.
         """
 
-        physical_objects = await urban_api_handler.get(
+        physical_objects = await self.api_handler.get(
             endpoint_url=f"/api/v1/scenarios/{scenario_id}/context/services_with_geometry",
             params={
                 "physical_object_type_id": physical_object_type_id,
@@ -372,6 +374,3 @@ class EffectsAPIGateway:
             headers={"Authorization": f"Bearer {token}"} if token else None,
         )
         return gpd.GeoDataFrame.from_features(physical_objects, crs=4326)
-
-
-effects_api_gateway = EffectsAPIGateway()

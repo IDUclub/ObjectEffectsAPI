@@ -1,6 +1,6 @@
 from .attribute_parser import attribute_parser
 from .data_restorator import data_restorator
-from .effects_api_gateway import effects_api_gateway
+from .effects_api_gateway import EffectsAPIGateway
 from .matrix_builder import matrix_builder
 from .name_mappings import (
     ATTRIBUTES_MAP,

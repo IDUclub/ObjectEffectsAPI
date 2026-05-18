@@ -4,9 +4,8 @@ from fastmcp import FastMCP
 from fastmcp.server.dependencies import CurrentContext, get_access_token
 from loguru import logger
 
+from app.dependencies import effects_mcp_service
 from app.dto.provision_dto import ProvisionDTO
-
-from .effects_service import effects_service
 
 effects_mcp = FastMCP("Object Effects MCP server")
 
@@ -62,7 +61,7 @@ async def calc_provision_effects(
             service_type_id=service_type_id,
             target_population=target_population,
         )
-        result = await effects_service.calculate_effects(
+        result = await effects_mcp_service.calculate_effects(
             effects_dto, token, for_mcp=True
         )
         return result
