@@ -390,34 +390,109 @@ class EffectsService:
             str: Text representation for formed stats in json string.
         """
 
-        before_buildings_all = before_buildings.copy()
-        after_buildings_all = after_buildings.copy()
-        before_services_all = before_services.copy()
-        after_services_all = after_services.copy()
+        before_buildings_all = before_buildings.rename(
+            columns={
+                k: v for k, v in ATTRIBUTES_MAP.items() if k in before_buildings.columns
+            }
+        )
+        after_buildings_all = after_buildings.rename(
+            columns={
+                k: v for k, v in ATTRIBUTES_MAP.items() if k in after_buildings.columns
+            }
+        )
+        before_services_all = before_services.rename(
+            columns={
+                k: v for k, v in ATTRIBUTES_MAP.items() if k in before_services.columns
+            }
+        )
+        after_services_all = after_services.rename(
+            columns={
+                k: v for k, v in ATTRIBUTES_MAP.items() if k in after_services.columns
+            }
+        )
+
         before_buildings_context = before_buildings[
             before_buildings["is_scenario_object"] == False
-        ]
+        ].rename(
+            columns={
+                k: v for k, v in ATTRIBUTES_MAP.items() if k in before_buildings.columns
+            }
+        )
         after_buildings_context = after_buildings[
             after_buildings["is_scenario_object"] == False
-        ]
+        ].rename(
+            columns={
+                k: v for k, v in ATTRIBUTES_MAP.items() if k in after_buildings.columns
+            }
+        )
         before_services_context = before_services[
             before_services["is_scenario_object"] == False
-        ]
+        ].rename(
+            columns={
+                k: v for k, v in ATTRIBUTES_MAP.items() if k in before_services.columns
+            }
+        )
         after_services_context = after_services[
             after_services["is_scenario_object"] == False
-        ]
+        ].rename(
+            columns={
+                k: v for k, v in ATTRIBUTES_MAP.items() if k in after_services.columns
+            }
+        )
         before_buildings_project = before_buildings[
             before_buildings["is_scenario_object"] == True
-        ]
+        ].rename(
+            columns={
+                k: v for k, v in ATTRIBUTES_MAP.items() if k in before_buildings.columns
+            }
+        )
         after_buildings_project = after_buildings[
             after_buildings["is_scenario_object"] == True
-        ]
+        ].rename(
+            columns={
+                k: v for k, v in ATTRIBUTES_MAP.items() if k in after_buildings.columns
+            }
+        )
         before_services_project = before_services[
             before_services["is_scenario_object"] == True
-        ]
+        ].rename(
+            columns={
+                k: v for k, v in ATTRIBUTES_MAP.items() if k in before_services.columns
+            }
+        )
         after_services_project = after_services[
             after_services["is_scenario_object"] == True
-        ]
+        ].rename(
+            columns={
+                k: v for k, v in ATTRIBUTES_MAP.items() if k in after_services.columns
+            }
+        )
+
+        before_buildings.rename(
+            columns={
+                k: v for k, v in ATTRIBUTES_MAP.items() if k in before_buildings.columns
+            },
+            inplace=True,
+        )
+        after_buildings.rename(
+            columns={
+                k: v for k, v in ATTRIBUTES_MAP.items() if k in after_buildings.columns
+            },
+            inplace=True,
+        )
+        before_services.rename(
+            columns={
+                k: v for k, v in ATTRIBUTES_MAP.items() if k in before_services.columns
+            },
+            inplace=True,
+        )
+        after_services.rename(
+            columns={
+                k: v for k, v in ATTRIBUTES_MAP.items() if k in after_services.columns
+            },
+            inplace=True,
+        )
+
         all_provision_before = int(
             before_buildings_all[
                 "Удовлетворённый спрос вне нормативной доступности (до) (чел)"

@@ -1,5 +1,8 @@
+import traceback
+
 from fastmcp import FastMCP
 from fastmcp.server.dependencies import CurrentContext, get_access_token
+from loguru import logger
 
 from app.dto.provision_dto import ProvisionDTO
 
@@ -49,14 +52,23 @@ async def calc_provision_effects(
     service_type_id: int, target_population: int | None = None, ctx=CurrentContext()
 ):
 
-    project_id = int(ctx.request_context.meta.project_id)
-    scenario_id = int(ctx.request_context.meta.scenario_id)
-    token = get_access_token()
-    effects_dto = ProvisionDTO(
-        project_id=project_id,
-        scenario_id=scenario_id,
-        service_type_id=service_type_id,
-        target_population=target_population,
-    )
-    result = await effects_service.calculate_effects(effects_dto, token, for_mcp=True)
-    return result
+    try:
+        project_id = int(ctx.request_context.meta.project_id)
+        scenario_id = int(ctx.request_context.meta.scenario_id)
+        token = get_access_token()
+        effects_dto = ProvisionDTO(
+            project_id=project_id,
+            scenario_id=scenario_id,
+            service_type_id=service_type_id,
+            target_population=target_population,
+        )
+        result = await effects_service.calculate_effects(
+            effects_dto, token, for_mcp=True
+        )
+        return result
+    except Exception as e:
+        tb = traceback.format_exc()
+        logger.opt(exception=True).error(
+            f"Error in MCP tool 'CalculateObjectEffects': {type(e).__name__}: {e}"
+        )
+        raise Exception(f"{type(e).__name__}: {e}\n\nTraceback:\n{tb}") from e
