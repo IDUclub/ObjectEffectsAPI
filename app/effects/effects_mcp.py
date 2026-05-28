@@ -52,9 +52,11 @@ async def calc_provision_effects(
 ):
 
     try:
-        project_id = int(ctx.request_context.meta.project_id)
         scenario_id = int(ctx.request_context.meta.scenario_id)
         token = get_access_token()
+        project_id = await effects_mcp_service.gateway.get_project_id_by_scenario(
+            scenario_id, token
+        )
         effects_dto = ProvisionDTO(
             project_id=project_id,
             scenario_id=scenario_id,
