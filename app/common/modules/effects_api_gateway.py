@@ -13,6 +13,24 @@ class EffectsAPIGateway:
     def __init__(self, api_handler: APIHandler) -> None:
         self.api_handler = api_handler
 
+    async def get_project_id_by_scenario(self, scenario_id: int, token: str) -> int:
+        """
+        Function retrieves project ID based on scenario ID from Urban API.
+        Args:
+            scenario_id (int): Scenario ID from Urban API.
+            token (str): User access token.
+        Returns:
+            int: Project ID from Urban API.
+        Raises:
+            Any: HTTP from Urban API.
+        """
+
+        proj_resp = await self.api_handler.get(
+            f"/api/v1/scenarios/{scenario_id}",
+            headers={"Authorization": f"Bearer {token}"} if token else None,
+        )
+        return proj_resp["project"]["project_id"]
+
     async def get_service_normative(
         self,
         territory_id: int,
