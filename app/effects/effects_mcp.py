@@ -1,7 +1,7 @@
 import traceback
 
 from fastmcp import FastMCP
-from fastmcp.server.dependencies import CurrentContext, get_access_token
+from fastmcp.server.dependencies import get_access_token
 from loguru import logger
 
 from app.dependencies import effects_mcp_service
@@ -14,10 +14,14 @@ effects_mcp = FastMCP("Object Effects MCP server")
     name="CalculateObjectEffects",
     title="Get provision effects for service",
     description="""
-    Retrieve service provision effects by service id.
+    Retrieve service provision effects by service id for scenario id.
     If total population is provided, demand is restored from it. Otherwise, population is restored from living square.
     
-    Args to select: 
+    Args to select:
+    - scenario_id (int): Scenario ID from Urban API to calculate effects for.
+    - service_type_id (int): Service type ID to calculate provision effects for.
+    - target_population (int, optional): Total population for demand calculation. If not provided, population is restored from living square.
+    
     
     Returns effects layers with estimated pivot info for llm analyses.
     Response format:
@@ -48,11 +52,10 @@ effects_mcp = FastMCP("Object Effects MCP server")
     """,
 )
 async def calc_provision_effects(
-    service_type_id: int, target_population: int | None = None, ctx=CurrentContext()
+    scenario_id: int, service_type_id: int, target_population: int | None = None
 ):
 
     try:
-        scenario_id = int(ctx.request_context.meta.scenario_id)
         token = get_access_token()
         project_id = await effects_mcp_service.gateway.get_project_id_by_scenario(
             scenario_id, token
