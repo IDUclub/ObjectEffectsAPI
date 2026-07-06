@@ -99,16 +99,16 @@ class ObjectNatCalculator:
         # ToDo fix calculation without/before
         effects = effects.copy()
         supplied_demand_within_before = effects[
-            "supplyed_demands_within_before"
+            "supplied_demands_within_before"
         ].fillna(0)
         supplied_demand_without_before = effects[
-            "supplyed_demands_without_before"
+            "supplied_demands_without_before"
         ].fillna(0)
-        supplied_demand_within_after = effects["supplyed_demands_within_after"].fillna(
+        supplied_demand_within_after = effects["supplied_demands_within_after"].fillna(
             0
         )
         supplied_demand_without_after = effects[
-            "supplyed_demands_without_after"
+            "supplied_demands_without_after"
         ].fillna(0)
         unsupplied_demand_within_before = effects["us_demands_within_before"].fillna(0)
         unsupplied_demand_within_after = effects["us_demands_within_after"].fillna(0)
@@ -121,11 +121,11 @@ class ObjectNatCalculator:
         effects.dropna(subset="is_project", inplace=True)
 
         project_total_supplied_demands_before = effects[effects["is_project"]][
-            "supplyed_demands_without_before"
+            "supplied_demands_without_before"
         ].fillna(0)
 
         project_total_supplied_demands_after = effects[effects["is_project"]][
-            "supplyed_demands_without_after"
+            "supplied_demands_without_after"
         ].fillna(0)
 
         project_total_us_demands_before = effects[effects["is_project"]][
@@ -193,41 +193,41 @@ class ObjectNatCalculator:
             gpd.GeoDataFrame: layer with effects, provision before and after attributes
         """
 
-        provision_before["supplyed_demands_within_before"] = provision_before[
-            "supplyed_demands_within"
+        provision_before["supplied_demands_within_before"] = provision_before[
+            "supplied_demands_within"
         ].copy()
 
         provision_before["us_demands_within_before"] = (
             provision_before["demand"]
-            - provision_before["supplyed_demands_within_before"]
+            - provision_before["supplied_demands_within_before"]
         )
 
-        provision_before["supplyed_demands_without_before"] = (
-            provision_before["supplyed_demands_without"]
-            + provision_before["supplyed_demands_within_before"]
+        provision_before["supplied_demands_without_before"] = (
+            provision_before["supplied_demands_without"]
+            + provision_before["supplied_demands_within_before"]
         )
 
         provision_before["us_demands_without_before"] = (
             provision_before["demand"]
-            - provision_before["supplyed_demands_within_before"]
+            - provision_before["supplied_demands_within_before"]
         )
 
-        provision_after["supplyed_demands_within_after"] = provision_after[
-            "supplyed_demands_within"
+        provision_after["supplied_demands_within_after"] = provision_after[
+            "supplied_demands_within"
         ].copy()
 
         provision_after["us_demands_within_after"] = (
-            provision_after["demand"] - provision_after["supplyed_demands_within_after"]
+            provision_after["demand"] - provision_after["supplied_demands_within_after"]
         )
 
-        provision_after["supplyed_demands_without_after"] = (
-            provision_after["supplyed_demands_within_after"]
-            + provision_after["supplyed_demands_without"].copy()
+        provision_after["supplied_demands_without_after"] = (
+            provision_after["supplied_demands_within_after"]
+            + provision_after["supplied_demands_without"].copy()
         )
 
         provision_after["us_demands_without_after"] = (
             provision_after["demand"]
-            - provision_after["supplyed_demands_without_after"]
+            - provision_after["supplied_demands_without_after"]
         )
 
         effects = provision_after.merge(
