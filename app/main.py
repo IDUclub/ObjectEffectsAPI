@@ -11,7 +11,7 @@ from .common.middlewares.exception_handler import ExceptionHandlerMiddleware
 from .common.middlewares.prometheus_handler import ObservabilityMiddleware
 from .dependencies import config, http_exception
 from .effects.effects_controller import effects_router
-from .mcp import effects_mcp_app
+from .mcp import effects_mcp_app, provision_mcp_app
 from .observability import OpenTelemetryAgent, PrometheusConfig
 from .observability.metrics import setup_metrics
 from .provision.provision_controller import provision_router
@@ -46,13 +46,16 @@ app = FastAPI(
     title="ObjectNat effects API",
     description="API for calculating effects for territory by ObjectNat library",
     version=APP_VERSION,
-    lifespan=combine_lifespans(lifespan, effects_mcp_app.lifespan),
+    lifespan=combine_lifespans(
+        lifespan, effects_mcp_app.lifespan, provision_mcp_app.lifespan
+    ),
 )
 
 app.include_router(effects_router)
 app.include_router(provision_router)
 
 app.mount("/effects/mcp", effects_mcp_app)
+app.mount("/provision/mcp", provision_mcp_app)
 
 # Add CORS middleware
 app.add_middleware(

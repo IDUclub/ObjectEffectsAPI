@@ -1,9 +1,9 @@
 import sys
 
-from iduconfig import Config
 from loguru import logger
 
 from app.common.api_handler.api_handler import APIHandler
+from app.common.config.config import Config
 from app.common.exceptions.http_exception_wrapper import http_exception
 from app.common.modules.effects_api_gateway import EffectsAPIGateway
 from app.effects.effects_service import EffectsService
@@ -33,3 +33,4 @@ effects_service = EffectsService(effects_api_gateway)
 effects_mcp_service = EffectsService(effects_api_mcp_gateway)
 
 provision_service = ProvisionService(effects_api_gateway)
+provision_mcp_service = ProvisionService(effects_api_mcp_gateway)

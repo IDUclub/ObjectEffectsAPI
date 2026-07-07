@@ -154,6 +154,10 @@ class EffectsService:
         target_scenario_population = await self.gateway.get_scenario_population_data(
             scenario_id=effects_params.scenario_id, token=token
         )
+        # User-provided population overrides the scenario population restored
+        # from Urban API (see the CalculateObjectEffects tool contract).
+        if effects_params.target_population:
+            target_scenario_population = effects_params.target_population
         target_scenario_buildings = await self.gateway.get_scenario_buildings(
             scenario_id=effects_params.scenario_id, token=token
         )
