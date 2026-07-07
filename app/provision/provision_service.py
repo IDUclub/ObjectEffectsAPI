@@ -201,13 +201,19 @@ class ProvisionService:
         """
 
         provision_values = buildings["provision_value"].dropna()
+        total_capacity = int(services["capacity"].sum())
+        total_demand = int(buildings["demand"].sum())
+        balance = total_capacity - total_demand
         return ProvisionSummarySchema(
             services_count=int(len(services)),
-            total_capacity=int(services["capacity"].sum()),
-            total_demand=int(buildings["demand"].sum()),
+            total_capacity=total_capacity,
+            total_demand=total_demand,
             satisfied_demand_within=int(buildings["supplied_demands_within"].sum()),
             satisfied_demand_without=int(buildings["supplied_demands_without"].sum()),
             unsatisfied_demand=int(buildings["demand_left"].sum()),
+            balance=balance,
+            deficit=max(0, -balance),
+            surplus=max(0, balance),
             average_provision_value=(
                 round(float(provision_values.mean()), 3)
                 if not provision_values.empty
@@ -240,6 +246,10 @@ class ProvisionService:
             scenario_id=provision_params.scenario_id,
             token=token,
         )
+        if provision_params.target_population:
+            shared_data["target_scenario_population"] = (
+                provision_params.target_population
+            )
         before_prove_data = await self._calculate_for_service(
             shared_data=shared_data,
             scenario_id=provision_params.scenario_id,
@@ -276,6 +286,8 @@ class ProvisionService:
             scenario_id=multi_params.scenario_id,
             token=token,
         )
+        if multi_params.target_population:
+            shared_data["target_scenario_population"] = multi_params.target_population
         results = {}
         for service_type_id, service_info in multi_params.services.items():
             try:

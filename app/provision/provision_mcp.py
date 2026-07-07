@@ -25,6 +25,8 @@ provision_mcp = FastMCP("Object Provision MCP server")
     Args to select:
     - scenario_id (int): Scenario ID from Urban API to calculate provision for.
     - service_type_id (int): Service type ID to calculate provision for.
+    - target_population (int, optional): Total population of the scenario territory for demand
+      calculation. If not provided, population is restored from Urban API data.
 
     Returns provision layers as GeoJSON FeatureCollections in WGS84 (EPSG:4326).
     Response format:
@@ -35,7 +37,9 @@ provision_mcp = FastMCP("Object Provision MCP server")
         }
     """,
 )
-async def calc_service_provision(scenario_id: int, service_type_id: int):
+async def calc_service_provision(
+    scenario_id: int, service_type_id: int, target_population: int | None = None
+):
 
     try:
         token = get_access_token()
@@ -46,6 +50,7 @@ async def calc_service_provision(scenario_id: int, service_type_id: int):
             project_id=project_id,
             scenario_id=scenario_id,
             service_type_id=service_type_id,
+            target_population=target_population,
         )
         result = await provision_mcp_service.calculate_provision(provision_dto, token)
         return result.model_dump()
@@ -70,6 +75,8 @@ async def calc_service_provision(scenario_id: int, service_type_id: int):
     - services (dict): Service type IDs to calculate, each with display name and layer flag:
         {"22": {"name": "Школа", "as_layer": true}, "21": {"name": "Детский сад", "as_layer": false}}
       For as_layer=true the response includes GeoJSON layers, otherwise only summary statistics.
+    - target_population (int, optional): Total population of the scenario territory for demand
+      calculation, shared by all services. If not provided, population is restored from Urban API data.
 
     Returns per-service results keyed by service type id.
     Response format:
@@ -84,6 +91,9 @@ async def calc_service_provision(scenario_id: int, service_type_id: int):
                         "satisfied_demand_within": int,
                         "satisfied_demand_without": int,
                         "unsatisfied_demand": int,
+                        "balance": int,
+                        "deficit": int,
+                        "surplus": int,
                         "average_provision_value": float,
                         "median_provision_value": float
                     },
@@ -99,7 +109,9 @@ async def calc_service_provision(scenario_id: int, service_type_id: int):
     """,
 )
 async def calc_services_provision(
-    scenario_id: int, services: dict[int, ServiceInfoSchema]
+    scenario_id: int,
+    services: dict[int, ServiceInfoSchema],
+    target_population: int | None = None,
 ):
 
     try:
@@ -107,6 +119,7 @@ async def calc_services_provision(
         multi_provision_params = MultiProvisionRequestSchema(
             scenario_id=scenario_id,
             services=services,
+            target_population=target_population,
         )
         result = await provision_mcp_service.calculate_multi_provision(
             multi_provision_params, token
