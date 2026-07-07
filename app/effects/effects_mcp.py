@@ -29,7 +29,7 @@ effects_mcp = FastMCP("Object Effects MCP server")
             "before_prove_data": {
                 "buildings": FeatureCollection,
                 "services": FeatureCollection,
-                "": FeatureCollection
+                "links": FeatureCollection
             },
             "after_prove_data": {
                 "buildings": FeatureCollection,
@@ -47,7 +47,7 @@ effects_mcp = FastMCP("Object Effects MCP server")
                 "average_absolute_within": float,
                 "median_absolute_within": int,
             },
-            "": str
+            "text_pivot": str
         }
     """,
 )

@@ -3,7 +3,6 @@ from typing import Literal
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from objectnat import get_balanced_buildings
 
 from app.common.exceptions.http_exception_wrapper import http_exception
 
@@ -50,6 +49,28 @@ class DataRestorator:
         buildings = buildings.to_crs(local_crs)
         return int(sum(buildings.area * buildings["storeys_count"]) * 0.8 / 33)
 
+    @staticmethod
+    def _balance_population(
+        buildings: gpd.GeoDataFrame,
+        population: int,
+    ) -> gpd.GeoDataFrame:
+        """
+        Function distributes population between buildings proportionally to their living area
+        Args:
+            buildings (gpd.GeoDataFrame): living buildings data with "living_area" attribute
+            population (int): total population to distribute
+        Returns:
+            gpd.GeoDataFrame: buildings data with restored "population" attribute
+        """
+
+        shares = buildings["living_area"] / buildings["living_area"].sum()
+        buildings["population"] = np.floor(shares * population).astype(int)
+        remainder = int(population - buildings["population"].sum())
+        if remainder > 0:
+            top = (shares * population).mod(1).nlargest(remainder).index
+            buildings.loc[top, "population"] += 1
+        return buildings
+
     # ToDo delete crs transformation
     def _restore_population(
         self,
@@ -75,12 +96,11 @@ class DataRestorator:
         )
         buildings["living_area"] = buildings.area * buildings["storeys_count"] * 0.8
         buildings["living_area"] = buildings["living_area"].astype(int)
-        balanced_buildings = get_balanced_buildings(
-            living_buildings=buildings,
+        buildings = self._balance_population(
+            buildings=buildings,
             population=int(target_population),
         )
-        balanced_buildings["population"] = balanced_buildings["population"].astype(int)
-        return balanced_buildings.to_crs(4326)
+        return buildings.to_crs(4326)
 
     @staticmethod
     def _generate_demand_per_building(

@@ -162,3 +162,7 @@ cython_debug/
 
 # Notebooks
 *.ipynb
+
+# Agents
+CLAUDE.md
+AGENTS.md
