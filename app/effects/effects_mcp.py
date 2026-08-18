@@ -1,13 +1,13 @@
 import traceback
 
 from fastmcp import FastMCP
-from fastmcp.server.dependencies import get_access_token
 from loguru import logger
 
-from app.dependencies import effects_mcp_service
+from app.common.auth.service_auth import get_mcp_user_id
+from app.dependencies import effects_mcp_service, service_token_verifier
 from app.dto.provision_dto import ProvisionDTO
 
-effects_mcp = FastMCP("Object Effects MCP server")
+effects_mcp = FastMCP("Object Effects MCP server", auth=service_token_verifier)
 
 
 @effects_mcp.tool(
@@ -56,7 +56,7 @@ async def calc_provision_effects(
 ):
 
     try:
-        token = get_access_token()
+        token = get_mcp_user_id()
         project_id = await effects_mcp_service.gateway.get_project_id_by_scenario(
             scenario_id, token
         )

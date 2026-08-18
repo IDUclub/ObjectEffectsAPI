@@ -5,6 +5,7 @@ import pandas as pd
 from shapely.geometry import shape
 
 from app.common.api_handler.api_handler import APIHandler
+from app.common.auth.service_auth import USER_ID_HEADER
 from app.common.exceptions.http_exception_wrapper import http_exception
 
 
@@ -27,7 +28,7 @@ class EffectsAPIGateway:
 
         proj_resp = await self.api_handler.get(
             f"/api/v1/scenarios/{scenario_id}",
-            headers={"Authorization": f"Bearer {token}"} if token else None,
+            headers={USER_ID_HEADER: token} if token else None,
         )
         return proj_resp["project"]["project_id"]
 
@@ -54,13 +55,13 @@ class EffectsAPIGateway:
         if len(context_ids) == 1:
             response = await self.api_handler.get(
                 f"/api/v1/territory/{context_ids[0]}/normatives",
-                headers={"Authorization": f"Bearer {token}"} if token else None,
+                headers={USER_ID_HEADER: token} if token else None,
             )
             request_ter_id = context_ids[0]
         else:
             response = await self.api_handler.get(
                 f"/api/v1/territory/{territory_id}/normatives",
-                headers={"Authorization": f"Bearer {token}"} if token else None,
+                headers={USER_ID_HEADER: token} if token else None,
             )
             request_ter_id = territory_id
         response_df = pd.DataFrame.from_records(response)
@@ -153,7 +154,7 @@ class EffectsAPIGateway:
 
         response = await self.api_handler.get(
             endpoint_url=f"/api/v1/projects/{project_id}",
-            headers={"Authorization": f"Bearer {token}"} if token else None,
+            headers={USER_ID_HEADER: token} if token else None,
         )
 
         return response
@@ -173,7 +174,7 @@ class EffectsAPIGateway:
         buildings = await self.api_handler.get(
             endpoint_url=f"/api/v1/scenarios/{scenario_id}/geometries_with_all_objects",
             params={"physical_object_type_id": 4},
-            headers={"Authorization": f"Bearer {token}"} if token else None,
+            headers={USER_ID_HEADER: token} if token else None,
         )
         buildings_gdf = gpd.GeoDataFrame.from_features(buildings)
         if buildings_gdf.empty:
@@ -200,7 +201,7 @@ class EffectsAPIGateway:
             params={
                 "physical_object_type_id": 4,
             },
-            headers={"Authorization": f"Bearer {token}"} if token else None,
+            headers={USER_ID_HEADER: token} if token else None,
         )
         context_buildings_gdf = gpd.GeoDataFrame.from_features(context_buildings)
         if context_buildings_gdf.empty:
@@ -226,7 +227,7 @@ class EffectsAPIGateway:
             params={
                 "service_type_id": service_type_id,
             },
-            headers={"Authorization": f"Bearer {token}"} if token else None,
+            headers={USER_ID_HEADER: token} if token else None,
         )
         services_gdf = gpd.GeoDataFrame.from_features(services)
         if services_gdf.empty:
@@ -255,7 +256,7 @@ class EffectsAPIGateway:
             params={
                 "service_type_id": service_type_id,
             },
-            headers={"Authorization": f"Bearer {token}"} if token else None,
+            headers={USER_ID_HEADER: token} if token else None,
         )
         context_services_gdf = gpd.GeoDataFrame.from_features(context_services)
         if context_services_gdf.empty:
@@ -280,7 +281,7 @@ class EffectsAPIGateway:
             params={
                 "indicator_ids": 1,
             },
-            headers={"Authorization": f"Bearer {token}"} if token else None,
+            headers={USER_ID_HEADER: token} if token else None,
         )
 
         if len(population) < 1 or (value := population[0]["value"]) < 1:
@@ -303,7 +304,7 @@ class EffectsAPIGateway:
             self.api_handler.get(
                 endpoint_url=f"/api/v1/territory/{territory_id}/indicator_values",
                 params={"indicator_ids": 1},
-                headers={"Authorization": f"Bearer {token}"} if token else None,
+                headers={USER_ID_HEADER: token} if token else None,
             )
             for territory_id in territory_ids_list
         ]
@@ -325,7 +326,7 @@ class EffectsAPIGateway:
 
         territory = await self.api_handler.get(
             endpoint_url=f"/api/v1/projects/{project_id}/territory",
-            headers={"Authorization": f"Bearer {token}"} if token else None,
+            headers={USER_ID_HEADER: token} if token else None,
         )
         territory_gdf = gpd.GeoDataFrame(
             geometry=[shape(territory["geometry"])], crs=4326
@@ -366,7 +367,7 @@ class EffectsAPIGateway:
                 "service_type_id": service_type_id,
                 "include_scenario_objects": True,
             },
-            headers={"Authorization": f"Bearer {token}"} if token else None,
+            headers={USER_ID_HEADER: token} if token else None,
         )
         return gpd.GeoDataFrame.from_features(services, crs=4326)
 
@@ -389,6 +390,6 @@ class EffectsAPIGateway:
                 "physical_object_type_id": physical_object_type_id,
                 "include_scenario_objects": True,
             },
-            headers={"Authorization": f"Bearer {token}"} if token else None,
+            headers={USER_ID_HEADER: token} if token else None,
         )
         return gpd.GeoDataFrame.from_features(physical_objects, crs=4326)

@@ -1,17 +1,17 @@
 import traceback
 
 from fastmcp import FastMCP
-from fastmcp.server.dependencies import get_access_token
 from loguru import logger
 
-from app.dependencies import provision_mcp_service
+from app.common.auth.service_auth import get_mcp_user_id
+from app.dependencies import provision_mcp_service, service_token_verifier
 from app.dto.provision_dto import ProvisionDTO
 from app.schemas.provision_base_schema import (
     MultiProvisionRequestSchema,
     ServiceInfoSchema,
 )
 
-provision_mcp = FastMCP("Object Provision MCP server")
+provision_mcp = FastMCP("Object Provision MCP server", auth=service_token_verifier)
 
 
 @provision_mcp.tool(
@@ -42,7 +42,7 @@ async def calc_service_provision(
 ):
 
     try:
-        token = get_access_token()
+        token = get_mcp_user_id()
         project_id = await provision_mcp_service.gateway.get_project_id_by_scenario(
             scenario_id, token
         )
@@ -115,7 +115,7 @@ async def calc_services_provision(
 ):
 
     try:
-        token = get_access_token()
+        token = get_mcp_user_id()
         multi_provision_params = MultiProvisionRequestSchema(
             scenario_id=scenario_id,
             services=services,
