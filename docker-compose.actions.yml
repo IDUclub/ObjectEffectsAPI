@@ -7,5 +7,9 @@ services:
       - "9464:9464"
     env_file:
       - .env.development
+    environment:
+      SERVICE_AUTH_SERVER_URL: ${SERVICE_AUTH_SERVER_URL:?SERVICE_AUTH_SERVER_URL is required}
+      SERVICE_AUTH_REALM: ${SERVICE_AUTH_REALM:?SERVICE_AUTH_REALM is required}
+      SERVICE_AUTH_CLIENT_ID: ${SERVICE_AUTH_CLIENT_ID:?SERVICE_AUTH_CLIENT_ID is required}
+      SERVICE_AUTH_CLIENT_SECRET: ${SERVICE_AUTH_CLIENT_SECRET:?SERVICE_AUTH_CLIENT_SECRET is required}
     restart: always
-

@@ -1,0 +1,1 @@
+idu-service-auth @ https://github.com/IDUclub/idu-service-auth/archive/1b8a418d9b1ab702860eb7289a3b75244666a8d8.tar.gz

@@ -1,15 +1,16 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from fastmcp.utilities.lifespan import combine_lifespans
 from loguru import logger
 
 from .__version__ import APP_VERSION
+from .common.auth.service_auth import require_service_token
 from .common.middlewares.exception_handler import ExceptionHandlerMiddleware
 from .common.middlewares.prometheus_handler import ObservabilityMiddleware
-from .dependencies import config, http_exception
+from .dependencies import config, http_exception, service_auth
 from .effects.effects_controller import effects_router
 from .mcp import effects_mcp_app, provision_mcp_app
 from .observability import OpenTelemetryAgent, PrometheusConfig
@@ -37,7 +38,9 @@ async def lifespan(app: FastAPI):
     )
     setup_metrics()
     logger.info(f"Prometheus server started on {config.get('PROMETHEUS_PORT')}")
-    yield
+    async with service_auth:
+        await service_auth.get_access_token()
+        yield
     otel_agent.shutdown()
     logger.info("Prometheus server was shut down")
 
@@ -79,7 +82,7 @@ async def read_root():
     return {"status": "OK"}
 
 
-@app.get("/logs")
+@app.get("/logs", dependencies=[Depends(require_service_token)])
 async def get_logs():
     """
     Get logs file from app
