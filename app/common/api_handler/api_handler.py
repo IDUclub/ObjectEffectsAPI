@@ -1,4 +1,5 @@
 import aiohttp
+from idu_service_auth import KeycloakTokenClient
 
 from app.common.exceptions.http_exception_wrapper import http_exception
 
@@ -8,6 +9,7 @@ class APIHandler:
     def __init__(
         self,
         base_url: str,
+        service_auth: KeycloakTokenClient,
     ) -> None:
         """Initialisation function
 
@@ -18,6 +20,12 @@ class APIHandler:
         """
 
         self.base_url = base_url
+        self.service_auth = service_auth
+
+    async def _service_headers(self, headers: dict | None) -> dict[str, str]:
+        outgoing = dict(headers or {})
+        outgoing.update(await self.service_auth.get_authorization_headers())
+        return outgoing
 
     @staticmethod
     async def _check_response_status(
@@ -89,6 +97,7 @@ class APIHandler:
                     params=params,
                     session=session,
                 )
+        headers = await self._service_headers(headers)
         url = self.base_url + endpoint_url
         async with session.get(url=url, headers=headers, params=params) as response:
             result = await self._check_response_status(response)
@@ -138,6 +147,7 @@ class APIHandler:
                     data=data,
                     session=session,
                 )
+        headers = await self._service_headers(headers)
         url = self.base_url + endpoint_url
         async with session.post(
             url=url,
@@ -184,6 +194,7 @@ class APIHandler:
                     data=data,
                     session=session,
                 )
+        headers = await self._service_headers(headers)
         url = self.base_url + endpoint_url
         async with session.put(
             url=url,
@@ -230,6 +241,7 @@ class APIHandler:
                     data=data,
                     session=session,
                 )
+        headers = await self._service_headers(headers)
         url = self.base_url + endpoint_url
         async with session.delete(
             url=url,

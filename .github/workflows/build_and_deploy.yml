@@ -48,5 +48,10 @@ jobs:
           ENV_PATH: ${{secrets.ENV_PATH}}
         run: cp "$ENV_PATH"/.env.development ./
       - name: run
+        env:
+          SERVICE_AUTH_SERVER_URL: ${{ vars.SERVICE_AUTH_SERVER_URL }}
+          SERVICE_AUTH_REALM: ${{ vars.SERVICE_AUTH_REALM }}
+          SERVICE_AUTH_CLIENT_ID: ${{ vars.SERVICE_AUTH_CLIENT_ID }}
+          SERVICE_AUTH_CLIENT_SECRET: ${{ secrets.SERVICE_AUTH_CLIENT_SECRET }}
 #        run: docker run -d --name "$CONTAINER_NAME" --env-file ./.env.development -p 8210:8000 "$IMAGE_NAME":"$NOW"
         run: docker compose -f docker-compose.actions.yml up -d
