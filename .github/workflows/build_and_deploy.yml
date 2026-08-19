@@ -36,6 +36,9 @@ jobs:
   run_container:
     runs-on: 65_runner
     needs: [build, stop_container]
+    # Required so the SERVICE_AUTH_* vars/secrets of the "production" environment resolve:
+    # without it they come out empty and docker-compose.actions.yml aborts on ${VAR:?...}.
+    environment: production
     env:
       NOW: ${{needs.build.outputs.now}}
     steps:
