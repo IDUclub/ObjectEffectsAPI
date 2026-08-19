@@ -23,6 +23,7 @@ class APIHandler:
         self.service_auth = service_auth
 
     async def _service_headers(self, headers: dict | None) -> dict[str, str]:
+        """Preserve request context while always replacing caller auth with M2M."""
         outgoing = dict(headers or {})
         outgoing.update(await self.service_auth.get_authorization_headers())
         return outgoing

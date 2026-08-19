@@ -56,9 +56,9 @@ async def calc_provision_effects(
 ):
 
     try:
-        token = get_mcp_user_id()
+        user_id = get_mcp_user_id()
         project_id = await effects_mcp_service.gateway.get_project_id_by_scenario(
-            scenario_id, token
+            scenario_id, user_id
         )
         effects_dto = ProvisionDTO(
             project_id=project_id,
@@ -67,7 +67,7 @@ async def calc_provision_effects(
             target_population=target_population,
         )
         result = await effects_mcp_service.calculate_effects(
-            effects_dto, token, for_mcp=True
+            effects_dto, user_id, for_mcp=True
         )
         return result
     except Exception as e:
