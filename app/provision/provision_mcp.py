@@ -42,9 +42,9 @@ async def calc_service_provision(
 ):
 
     try:
-        token = get_mcp_user_id()
+        user_id = get_mcp_user_id()
         project_id = await provision_mcp_service.gateway.get_project_id_by_scenario(
-            scenario_id, token
+            scenario_id, user_id
         )
         provision_dto = ProvisionDTO(
             project_id=project_id,
@@ -52,7 +52,9 @@ async def calc_service_provision(
             service_type_id=service_type_id,
             target_population=target_population,
         )
-        result = await provision_mcp_service.calculate_provision(provision_dto, token)
+        result = await provision_mcp_service.calculate_provision(
+            provision_dto, user_id
+        )
         return result.model_dump()
     except Exception as e:
         tb = traceback.format_exc()
@@ -115,14 +117,14 @@ async def calc_services_provision(
 ):
 
     try:
-        token = get_mcp_user_id()
+        user_id = get_mcp_user_id()
         multi_provision_params = MultiProvisionRequestSchema(
             scenario_id=scenario_id,
             services=services,
             target_population=target_population,
         )
         result = await provision_mcp_service.calculate_multi_provision(
-            multi_provision_params, token
+            multi_provision_params, user_id
         )
         return result.model_dump()
     except Exception as e:
