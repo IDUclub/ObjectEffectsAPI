@@ -1,4 +1,8 @@
 import asyncio
+import hashlib
+import json
+import os
+from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
@@ -64,6 +68,35 @@ class EffectsAPIGateway:
                 headers={USER_ID_HEADER: token} if token else None,
             )
             request_ter_id = territory_id
+        # Explicit local assessment fixture: real Urban values always take precedence.
+        fixture_path = os.getenv("TEST_SERVICE_NORMATIVES_FILE")
+        if fixture_path and not any(
+            (row.get("service_type") or {}).get("id") == service_type_id
+            for row in response or []
+        ):
+            raw = Path(fixture_path).read_bytes()
+            fixture = json.loads(raw)
+            if fixture.get("source_kind") != "test_mock":
+                raise ValueError("Normative fixture must declare source_kind=test_mock")
+            if request_ter_id in fixture["territory_ids"]:
+                rows = [
+                    row
+                    for row in fixture["normatives"]
+                    if row["service_type"]["id"] == service_type_id
+                ]
+                response = list(response or []) + [
+                    dict(
+                        row,
+                        source={
+                            "kind": "test_mock",
+                            "fixture_id": fixture["id"],
+                            "sha256": hashlib.sha256(raw).hexdigest(),
+                            "description": fixture["description"],
+                            "legal_compliance_claim": False,
+                        },
+                    )
+                    for row in rows
+                ]
         if not response:
             raise self._missing_service_normative(
                 territory_id, context_ids, request_ter_id, service_type_id, []

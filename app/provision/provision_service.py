@@ -106,6 +106,7 @@ class ProvisionService:
             service_type_id=service_type_id,
             token=token,
         )
+        shared_data.setdefault("normatives", {})[service_type_id] = normative_data
         context_buildings = await asyncio.to_thread(
             data_restorator.restore_demands,
             buildings=shared_data["context_buildings"].copy(),
@@ -278,7 +279,12 @@ class ProvisionService:
         logger.info(
             f"Calculated PROVISION for {provision_params.scenario_id} and {provision_params.service_type_id}"
         )
-        return ProvisionSchema(**result)
+        return ProvisionSchema(
+            **result,
+            normative=shared_data.get("normatives", {}).get(
+                provision_params.service_type_id
+            ),
+        )
 
     async def calculate_multi_provision(
         self, multi_params: MultiProvisionRequestSchema, token: str
@@ -350,6 +356,7 @@ class ProvisionService:
                     services=before_prove_data["services"],
                 ),
                 layers=layers,
+                normative=shared_data.get("normatives", {}).get(service_type_id),
             )
         logger.info(f"Calculated MULTI PROVISION for {multi_params.scenario_id}")
         return MultiProvisionSchema(services=results)

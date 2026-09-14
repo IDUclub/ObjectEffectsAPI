@@ -85,3 +85,54 @@ async def test_missing_normative_keeps_other_service_layers():
     assert result.services[22].layers is None
     assert result.services[21].error is None
     assert len(result.services[21].layers.buildings.features) == 1
+
+
+@pytest.mark.asyncio
+async def test_explicit_mock_normative_is_scoped_and_has_provenance(
+    tmp_path, monkeypatch
+):
+    import json
+    from hashlib import sha256
+
+    fixture = tmp_path / "norms.json"
+    fixture.write_text(
+        json.dumps(
+            {
+                "id": "test-education-v1",
+                "source_kind": "test_mock",
+                "description": "Synthetic assessment values",
+                "territory_ids": [9],
+                "normatives": [
+                    {
+                        "service_type": {"id": 22},
+                        "year": 2026,
+                        "radius_availability_meters": None,
+                        "time_availability_minutes": 15,
+                        "services_per_1000_normative": None,
+                        "services_capacity_per_1000_normative": 100,
+                    }
+                ],
+            }
+        )
+    )
+    monkeypatch.setenv("TEST_SERVICE_NORMATIVES_FILE", str(fixture))
+    handler = AsyncMock()
+    handler.get.return_value = []
+    gateway = EffectsAPIGateway(handler)
+    result = await gateway.get_service_normative(9, [], 22, "u1")
+    assert result["normative_type"] == "time"
+    assert result["normative_value"] == 15
+    assert result["source"]["kind"] == "test_mock"
+    assert result["source"]["sha256"] == sha256(fixture.read_bytes()).hexdigest()
+    assert result["source"]["legal_compliance_claim"] is False
+    with pytest.raises(HTTPException):
+        await gateway.get_service_normative(10, [], 22, "u1")
+    with pytest.raises(HTTPException):
+        await gateway.get_service_normative(9, [], 21, "u1")
+    # A configured fixture must never replace available authoritative input.
+    handler.get.return_value = [
+        dict(result, source={"kind": "urban_api"}, time_availability_minutes=20)
+    ]
+    actual = await gateway.get_service_normative(9, [], 22, "u1")
+    assert actual["normative_value"] == 20
+    assert actual["source"]["kind"] == "urban_api"

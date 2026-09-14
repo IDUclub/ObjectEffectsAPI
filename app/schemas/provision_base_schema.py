@@ -32,6 +32,8 @@ class FeatureCollectionSchema(BaseModel):
 
 class ProvisionSchema(BaseModel):
 
+    normative: dict | None = None
+
     buildings: FeatureCollectionSchema
     services: FeatureCollectionSchema
     links: FeatureCollectionSchema
@@ -101,6 +103,8 @@ class VariantProvisionRequestSchema(MultiProvisionRequestSchema):
 
 
 class ServiceProvisionResultSchema(BaseModel):
+
+    normative: dict | None = None
 
     name: str
     summary: ProvisionSummarySchema | None = None
