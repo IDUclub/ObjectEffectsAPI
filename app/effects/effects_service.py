@@ -375,7 +375,7 @@ class EffectsService:
                 before_prove_data["services"],
                 after_prove_data["services"],
             )
-        return EffectsSchema(**result)
+        return EffectsSchema(**result, normative=normative_data)
 
     @staticmethod
     async def form_llm_context(

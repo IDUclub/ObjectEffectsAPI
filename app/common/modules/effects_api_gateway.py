@@ -1,4 +1,8 @@
 import asyncio
+import hashlib
+import json
+import os
+from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
@@ -64,6 +68,39 @@ class EffectsAPIGateway:
                 headers={USER_ID_HEADER: token} if token else None,
             )
             request_ter_id = territory_id
+        # Explicit local assessment fixture: real Urban values always take precedence.
+        fixture_path = os.getenv("TEST_SERVICE_NORMATIVES_FILE")
+        if fixture_path and not any(
+            (row.get("service_type") or {}).get("id") == service_type_id
+            for row in response or []
+        ):
+            raw = Path(fixture_path).read_bytes()
+            fixture = json.loads(raw)
+            if fixture.get("source_kind") != "test_mock":
+                raise ValueError("Normative fixture must declare source_kind=test_mock")
+            if request_ter_id in fixture["territory_ids"]:
+                rows = [
+                    row
+                    for row in fixture["normatives"]
+                    if row["service_type"]["id"] == service_type_id
+                ]
+                response = list(response or []) + [
+                    dict(
+                        row,
+                        source={
+                            "kind": "test_mock",
+                            "fixture_id": fixture["id"],
+                            "sha256": hashlib.sha256(raw).hexdigest(),
+                            "description": fixture["description"],
+                            "legal_compliance_claim": False,
+                        },
+                    )
+                    for row in rows
+                ]
+        if not response:
+            raise self._missing_service_normative(
+                territory_id, context_ids, request_ter_id, service_type_id, []
+            )
         response_df = pd.DataFrame.from_records(response)
         response_df["service_type_id"] = response_df["service_type"].apply(
             lambda x: x["id"] if x else None
@@ -72,17 +109,12 @@ class EffectsAPIGateway:
             response_df["service_type_id"] == service_type_id
         ].copy()
         if len(service_type) < 1:
-            raise http_exception(
-                400,
-                msg="Service type id not found in urban_db for provided territory/context ids. ",
-                _input={
-                    "territory_id": territory_id,
-                    "context_ids": context_ids,
-                    "service_type_id": service_type_id,
-                },
-                _detail={
-                    "Available service ids": response_df["service_type_id"].to_list()
-                },
+            raise self._missing_service_normative(
+                territory_id,
+                context_ids,
+                request_ter_id,
+                service_type_id,
+                response_df["service_type_id"].dropna().to_list(),
             )
 
         service_type = (
@@ -138,6 +170,30 @@ class EffectsAPIGateway:
                 "service_type_id": service_type_id,
             },
             _detail={"Available service ids": response_df["service_type_id"].to_list()},
+        )
+
+    @staticmethod
+    def _missing_service_normative(
+        territory_id, context_ids, request_ter_id, service_type_id, available_ids
+    ):
+        return http_exception(
+            400,
+            msg="Норматив обеспеченности для выбранного вида услуг не задан в Urban API.",
+            _input={
+                "territory_id": territory_id,
+                "context_ids": context_ids,
+                "request_ter_id": request_ter_id,
+                "service_type_id": service_type_id,
+            },
+            _detail={
+                "code": "missing_service_normative",
+                "Available service ids": available_ids,
+                "required_action": (
+                    f"Укажите или добавьте в Urban API норматив для территории {request_ter_id} "
+                    f"и вида услуг {service_type_id}: радиус или время доступности и норму "
+                    "обеспеченности. Либо выберите территорию с заданным нормативом."
+                ),
+            },
         )
 
     async def get_project_data(
