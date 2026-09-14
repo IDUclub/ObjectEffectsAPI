@@ -85,6 +85,21 @@ class ProvisionSummarySchema(BaseModel):
     median_provision_value: float | None
 
 
+class VariantProvisionRequestSchema(MultiProvisionRequestSchema):
+    target_population: int = Field(
+        gt=0,
+        description="Total population of the whole target scenario, including preserved buildings; not only new residents",
+    )
+    generated_buildings: dict | None = Field(
+        default=None,
+        description="GenBuilder WGS84 FeatureCollection; new residential buildings are added to existing scenario buildings",
+    )
+    additional_services: dict[int, dict] = Field(
+        default_factory=dict,
+        description="New service layers keyed by service type ID; properties.capacity and properties.service_type_id required",
+    )
+
+
 class ServiceProvisionResultSchema(BaseModel):
 
     name: str
