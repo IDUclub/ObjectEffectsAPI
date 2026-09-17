@@ -22,5 +22,6 @@ jobs:
           --requirement requirements-auth.txt \
           pytest \
           pytest-asyncio
-        .venv/bin/python -m pytest --verbose tests
+        cp .env.example .env.test
+        APP_ENV=test .venv/bin/python -m pytest --verbose tests
     secrets: inherit
