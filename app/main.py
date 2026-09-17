@@ -1,13 +1,12 @@
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from fastmcp.utilities.lifespan import combine_lifespans
 from loguru import logger
 
 from .__version__ import APP_VERSION
-from .common.auth.service_auth import require_service_token
 from .common.middlewares.exception_handler import ExceptionHandlerMiddleware
 from .common.middlewares.prometheus_handler import ObservabilityMiddleware
 from .dependencies import config, http_exception, service_auth
@@ -82,7 +81,7 @@ async def read_root():
     return {"status": "OK"}
 
 
-@app.get("/logs", dependencies=[Depends(require_service_token)])
+@app.get("/logs")
 async def get_logs():
     """
     Get logs file from app
