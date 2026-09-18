@@ -1,6 +1,7 @@
 import aiohttp
 from idu_service_auth import KeycloakTokenClient
 
+from app.common.api_handler.urban_api_url import normalize_urban_api_url
 from app.common.exceptions.http_exception_wrapper import http_exception
 
 
@@ -19,7 +20,7 @@ class APIHandler:
             None
         """
 
-        self.base_url = base_url
+        self.base_url = normalize_urban_api_url(base_url)
         self.service_auth = service_auth
 
     async def _service_headers(self, headers: dict | None) -> dict[str, str]:
@@ -99,7 +100,8 @@ class APIHandler:
                     session=session,
                 )
         headers = await self._service_headers(headers)
-        url = self.base_url + endpoint_url
+        endpoint = endpoint_url.lstrip("/").removeprefix("api/")
+        url = f"{self.base_url}/{endpoint}"
         async with session.get(url=url, headers=headers, params=params) as response:
             result = await self._check_response_status(response)
             if isinstance(result, list):
@@ -149,7 +151,8 @@ class APIHandler:
                     session=session,
                 )
         headers = await self._service_headers(headers)
-        url = self.base_url + endpoint_url
+        endpoint = endpoint_url.lstrip("/").removeprefix("api/")
+        url = f"{self.base_url}/{endpoint}"
         async with session.post(
             url=url,
             headers=headers,
@@ -196,7 +199,8 @@ class APIHandler:
                     session=session,
                 )
         headers = await self._service_headers(headers)
-        url = self.base_url + endpoint_url
+        endpoint = endpoint_url.lstrip("/").removeprefix("api/")
+        url = f"{self.base_url}/{endpoint}"
         async with session.put(
             url=url,
             headers=headers,
@@ -243,7 +247,8 @@ class APIHandler:
                     session=session,
                 )
         headers = await self._service_headers(headers)
-        url = self.base_url + endpoint_url
+        endpoint = endpoint_url.lstrip("/").removeprefix("api/")
+        url = f"{self.base_url}/{endpoint}"
         async with session.delete(
             url=url,
             headers=headers,
