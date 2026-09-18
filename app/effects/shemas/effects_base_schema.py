@@ -23,6 +23,7 @@ class PivotSchema(BaseModel):
 
 
 class EffectsSchema(BaseModel):
+    normative: dict | None = None
 
     before_prove_data: ProvisionSchema
     after_prove_data: ProvisionSchema

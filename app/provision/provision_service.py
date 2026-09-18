@@ -14,6 +14,7 @@ from app.common.modules import (
     objectnat_calculator,
 )
 from app.dto.provision_dto import ProvisionDTO
+from app.provision.variant import add_generated_buildings, additional_services
 from app.schemas.provision_base_schema import (
     MultiProvisionRequestSchema,
     MultiProvisionSchema,
@@ -105,6 +106,7 @@ class ProvisionService:
             service_type_id=service_type_id,
             token=token,
         )
+        shared_data.setdefault("normatives", {})[service_type_id] = normative_data
         context_buildings = await asyncio.to_thread(
             data_restorator.restore_demands,
             buildings=shared_data["context_buildings"].copy(),
@@ -146,6 +148,23 @@ class ProvisionService:
             services=target_scenario_services,
             service_default_capacity=service_default_capacity,
         )
+        extra = shared_data.get("additional_services", {}).get(service_type_id)
+        if extra is not None:
+            first_id = (
+                min(
+                    [
+                        0,
+                        *context_services.get("service_id", []),
+                        *target_scenario_services.get("service_id", []),
+                    ]
+                )
+                - 1
+            )
+            proposed = additional_services(extra, service_type_id, first_id)
+            target_scenario_services = gpd.GeoDataFrame(
+                pd.concat([target_scenario_services, proposed], ignore_index=True),
+                crs=4326,
+            )
         before_buildings = await asyncio.to_thread(
             pd.concat,
             objs=[context_buildings, target_scenario_buildings],
@@ -260,7 +279,12 @@ class ProvisionService:
         logger.info(
             f"Calculated PROVISION for {provision_params.scenario_id} and {provision_params.service_type_id}"
         )
-        return ProvisionSchema(**result)
+        return ProvisionSchema(
+            **result,
+            normative=shared_data.get("normatives", {}).get(
+                provision_params.service_type_id
+            ),
+        )
 
     async def calculate_multi_provision(
         self, multi_params: MultiProvisionRequestSchema, token: str
@@ -288,6 +312,17 @@ class ProvisionService:
         )
         if multi_params.target_population:
             shared_data["target_scenario_population"] = multi_params.target_population
+        generated = getattr(multi_params, "generated_buildings", None)
+        additions = getattr(multi_params, "additional_services", {})
+        if generated is not None:
+            shared_data["target_scenario_buildings"] = add_generated_buildings(
+                shared_data["target_scenario_buildings"], generated
+            )
+        if not set(additions) <= set(multi_params.services):
+            raise ValueError(
+                "Additional services must belong to requested service types"
+            )
+        shared_data["additional_services"] = additions
         results = {}
         for service_type_id, service_info in multi_params.services.items():
             try:
@@ -321,6 +356,7 @@ class ProvisionService:
                     services=before_prove_data["services"],
                 ),
                 layers=layers,
+                normative=shared_data.get("normatives", {}).get(service_type_id),
             )
         logger.info(f"Calculated MULTI PROVISION for {multi_params.scenario_id}")
         return MultiProvisionSchema(services=results)

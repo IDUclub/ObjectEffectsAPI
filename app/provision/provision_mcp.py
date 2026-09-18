@@ -9,9 +9,52 @@ from app.dto.provision_dto import ProvisionDTO
 from app.schemas.provision_base_schema import (
     MultiProvisionRequestSchema,
     ServiceInfoSchema,
+    VariantProvisionRequestSchema,
 )
 
 provision_mcp = FastMCP("Object Provision MCP server", auth=service_token_verifier)
+
+
+@provision_mcp.tool(
+    name="CalculateVariantServicesProvision",
+    title="Evaluate an unsaved planning variant",
+    description="Calculate provision using new GenBuilder residential buildings and/or proposed services, "
+    "preserving existing scenario buildings and services. No Urban API writes. "
+    "generated_buildings is a WGS84 FeatureCollection with properties.zone=residential and floors_count; "
+    "is_excluded features are ignored because existing buildings and attributes are retained from Urban. "
+    "additional_services maps service type IDs to new WGS84 layers with explicit positive capacity and service_type_id. "
+    "target_population is the TOTAL population of the whole scenario including existing residents. "
+    "Demand is distributed using the existing floor-area restoration and gravity accessibility model. "
+    "Call CalculateServicesProvision separately for the baseline; compare summaries and full layers.",
+)
+async def calc_variant_services_provision(
+    scenario_id: int,
+    services: dict[int, ServiceInfoSchema],
+    target_population: int,
+    generated_buildings: dict | None = None,
+    additional_services: dict[int, dict] | None = None,
+):
+    if generated_buildings is None and not additional_services:
+        raise ValueError(
+            "A variant requires generated buildings or additional services"
+        )
+    params = VariantProvisionRequestSchema(
+        scenario_id=scenario_id,
+        services=services,
+        target_population=target_population,
+        generated_buildings=generated_buildings,
+        additional_services=additional_services or {},
+    )
+    result = await provision_mcp_service.calculate_multi_provision(
+        params, get_mcp_user_id()
+    )
+    return {
+        **result.model_dump(),
+        "scenario_id": scenario_id,
+        "target_population": target_population,
+        "methodology": "Existing buildings and services preserved; population distributed by restored floor area; gravity accessibility model",
+        "variant": True,
+    }
 
 
 @provision_mcp.tool(
