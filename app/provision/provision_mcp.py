@@ -52,9 +52,7 @@ async def calc_service_provision(
             service_type_id=service_type_id,
             target_population=target_population,
         )
-        result = await provision_mcp_service.calculate_provision(
-            provision_dto, user_id
-        )
+        result = await provision_mcp_service.calculate_provision(provision_dto, user_id)
         return result.model_dump()
     except Exception as e:
         tb = traceback.format_exc()
