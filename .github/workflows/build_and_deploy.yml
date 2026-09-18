@@ -56,5 +56,6 @@ jobs:
           SERVICE_AUTH_REALM: ${{ vars.SERVICE_AUTH_REALM }}
           SERVICE_AUTH_CLIENT_ID: ${{ vars.SERVICE_AUTH_CLIENT_ID }}
           SERVICE_AUTH_CLIENT_SECRET: ${{ secrets.SERVICE_AUTH_CLIENT_SECRET }}
+          URBAN_API: ${{ vars.URBAN_API }}
 #        run: docker run -d --name "$CONTAINER_NAME" --env-file ./.env.development -p 8210:8000 "$IMAGE_NAME":"$NOW"
         run: docker compose -f docker-compose.actions.yml up -d
