@@ -119,6 +119,12 @@ class ProvisionService:
                 override.capacity_per_1000
             )
             normative_data["capacity_type"] = "capacity"
+        if override.residents_per_service is not None:
+            # Demand is every resident; each service object serves a fixed number of them.
+            normative_data["services_capacity_per_1000_normative"] = (
+                1000 / override.residents_per_service
+            )
+            normative_data["capacity_type"] = "unit"
         if override.accessibility_value is not None:
             normative_data["normative_value"] = override.accessibility_value
             normative_data["normative_type"] = override.accessibility_type
@@ -220,6 +226,10 @@ class ProvisionService:
             normative_value=normative_data["normative_value"],
             normative_type=normative_data["normative_type"],
         )
+        if normative_override and normative_override.residents_per_service:
+            before_services["capacity"] = float(
+                normative_override.residents_per_service
+            )
         before_services["capacity"] = before_services["capacity"].fillna(
             before_services["capacity"].mean()
         )
@@ -235,6 +245,9 @@ class ProvisionService:
                 "services_capacity_per_1000_normative"
             ),
             "capacity_type": normative_data.get("capacity_type"),
+            "residents_per_service": (
+                normative_override.residents_per_service if normative_override else None
+            ),
             "accessibility_value": normative_data.get("normative_value"),
             "accessibility_type": normative_data.get("normative_type"),
         }

@@ -146,12 +146,15 @@ async def calc_services_provision(
     - scenario_id (int): Scenario ID from Urban API.
     - service_type_id (int): Service type ID.
     - capacity_per_1000 (float, optional): Places per 1000 residents set by the norm.
+    - residents_per_service (float, optional): Residents per one service object for norms
+      like "1 object per N thousand residents"; then demand is the residents themselves.
+      Excludes capacity_per_1000.
     - accessibility_type ("time" | "dist", optional): Accessibility unit, minutes or metres.
     - accessibility_value (float, optional): Accessibility set by the norm.
 
     Returns:
         {
-            "normative": {"capacity_per_1000", "capacity_type",
+            "normative": {"capacity_per_1000", "capacity_type", "residents_per_service",
                           "accessibility_value", "accessibility_type"},
             "summary": {... provision summary ...},
             "buildings": FeatureCollection of residential buildings with building_id,
@@ -166,6 +169,7 @@ async def calc_normative_provision(
     capacity_per_1000: float | None = None,
     accessibility_type: Literal["time", "dist"] | None = None,
     accessibility_value: float | None = None,
+    residents_per_service: float | None = None,
 ):
 
     try:
@@ -174,6 +178,7 @@ async def calc_normative_provision(
             scenario_id=scenario_id,
             service_type_id=service_type_id,
             capacity_per_1000=capacity_per_1000,
+            residents_per_service=residents_per_service,
             accessibility_type=accessibility_type,
             accessibility_value=accessibility_value,
         )

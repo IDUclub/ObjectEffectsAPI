@@ -21,6 +21,11 @@ class NormativeOverride(BaseModel):
     capacity_per_1000: float | None = Field(
         default=None, gt=0, description="Places per 1000 residents"
     )
+    residents_per_service: float | None = Field(
+        default=None,
+        gt=0,
+        description="Residents served by one service object (1 object per N residents)",
+    )
     accessibility_type: Literal["time", "dist"] | None = Field(
         default=None, description="time — minutes, dist — metres"
     )
@@ -30,13 +35,21 @@ class NormativeOverride(BaseModel):
     def accessibility_has_a_type(self) -> "NormativeOverride":
         if (self.accessibility_type is None) != (self.accessibility_value is None):
             raise ValueError("accessibility_type and accessibility_value go together")
+        if (
+            self.capacity_per_1000 is not None
+            and self.residents_per_service is not None
+        ):
+            raise ValueError(
+                "capacity_per_1000 and residents_per_service exclude each other"
+            )
         return self
 
     def is_complete(self) -> bool:
         """Both values are set, so the Urban API normative is not needed."""
-        return (
-            self.capacity_per_1000 is not None and self.accessibility_value is not None
+        has_capacity = (
+            self.capacity_per_1000 is not None or self.residents_per_service is not None
         )
+        return has_capacity and self.accessibility_value is not None
 
 
 class NormativeProvisionDTO(NormativeOverride):
@@ -47,6 +60,7 @@ class NormativeProvisionDTO(NormativeOverride):
     def override(self) -> NormativeOverride:
         return NormativeOverride(
             capacity_per_1000=self.capacity_per_1000,
+            residents_per_service=self.residents_per_service,
             accessibility_type=self.accessibility_type,
             accessibility_value=self.accessibility_value,
         )

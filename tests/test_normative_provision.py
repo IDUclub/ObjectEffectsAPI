@@ -69,3 +69,22 @@ def test_accessibility_value_requires_its_type():
 def test_tool_is_published():
     tools = asyncio.run(provision_mcp.list_tools())
     assert "CalculateNormativeProvision" in {tool.name for tool in tools}
+
+
+def test_objects_per_residents_norm_counts_every_resident_as_demand():
+    normative = resolve(
+        NormativeOverride(
+            residents_per_service=10_000,
+            accessibility_type="time",
+            accessibility_value=30,
+        ),
+        fail=True,
+    )
+    assert normative["capacity_type"] == "unit"
+    assert normative["services_capacity_per_1000_normative"] == pytest.approx(0.1)
+    assert normative["normative_value"] == 30
+
+
+def test_places_and_residents_per_service_exclude_each_other():
+    with pytest.raises(ValidationError):
+        NormativeOverride(capacity_per_1000=10, residents_per_service=10_000)
