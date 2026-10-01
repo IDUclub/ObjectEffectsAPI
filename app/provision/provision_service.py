@@ -13,7 +13,11 @@ from app.common.modules import (
     matrix_builder,
     objectnat_calculator,
 )
-from app.dto.provision_dto import ProvisionDTO
+from app.dto.provision_dto import (
+    NormativeOverride,
+    NormativeProvisionDTO,
+    ProvisionDTO,
+)
 from app.schemas.provision_base_schema import (
     MultiProvisionRequestSchema,
     MultiProvisionSchema,
@@ -77,12 +81,56 @@ class ProvisionService:
             "target_scenario_buildings": target_scenario_buildings,
         }
 
+    async def _resolve_normative(
+        self,
+        project_data: dict,
+        service_type_id: int,
+        token: str,
+        normative_override: NormativeOverride | None = None,
+    ) -> dict:
+        """
+        Get the Urban API normative of a service type, with the norm's own values on top
+        Args:
+            project_data (dict): project data with territory and context
+            service_type_id (int): Service type ID
+            token (str): Authorization token
+            normative_override (NormativeOverride | None): values set by a regulatory norm
+        Returns:
+            dict: capacity per 1000 and its type, accessibility value and its type
+        """
+
+        override = normative_override or NormativeOverride()
+        try:
+            normative_data = dict(
+                await self.gateway.get_service_normative(
+                    territory_id=project_data["territory"]["id"],
+                    context_ids=project_data["properties"]["context"],
+                    service_type_id=service_type_id,
+                    token=token,
+                )
+            )
+        except Exception:
+            # A norm stating both values needs no Urban API normative.
+            if not override.is_complete():
+                raise
+            normative_data = {}
+        if override.capacity_per_1000 is not None:
+            normative_data["services_capacity_per_1000_normative"] = (
+                override.capacity_per_1000
+            )
+            normative_data["capacity_type"] = "capacity"
+        if override.accessibility_value is not None:
+            normative_data["normative_value"] = override.accessibility_value
+            normative_data["normative_type"] = override.accessibility_type
+        return normative_data
+
     async def _calculate_for_service(
         self,
         shared_data: dict,
         scenario_id: int,
         service_type_id: int,
         token: str,
+        normative_override: NormativeOverride | None = None,
     ) -> dict[str, gpd.GeoDataFrame]:
         """
         Calculate provision for one service type over prefetched scenario data
@@ -91,6 +139,7 @@ class ProvisionService:
             scenario_id (int): Target scenario ID
             service_type_id (int): Service type ID
             token (str): Authorization token
+            normative_override (NormativeOverride | None): normative values set by a norm
         Returns:
             dict[str, gpd.GeoDataFrame]: dict with fields "buildings", "services" and "links"
         """
@@ -99,11 +148,8 @@ class ProvisionService:
         service_default_capacity = await self.gateway.get_default_capacity(
             service_type_id=service_type_id
         )
-        normative_data = await self.gateway.get_service_normative(
-            territory_id=project_data["territory"]["id"],
-            context_ids=project_data["properties"]["context"],
-            service_type_id=service_type_id,
-            token=token,
+        normative_data = await self._resolve_normative(
+            project_data, service_type_id, token, normative_override
         )
         context_buildings = await asyncio.to_thread(
             data_restorator.restore_demands,
@@ -184,6 +230,14 @@ class ProvisionService:
             matrix=before_matrix,
             service_normative=normative_data["normative_value"],
         )
+        before_prove_data["normative"] = {
+            "capacity_per_1000": normative_data.get(
+                "services_capacity_per_1000_normative"
+            ),
+            "capacity_type": normative_data.get("capacity_type"),
+            "accessibility_value": normative_data.get("normative_value"),
+            "accessibility_type": normative_data.get("normative_type"),
+        }
         return before_prove_data
 
     @staticmethod
@@ -256,6 +310,7 @@ class ProvisionService:
             service_type_id=provision_params.service_type_id,
             token=token,
         )
+        before_prove_data.pop("normative")
         result = {k: json.loads(v.to_json()) for k, v in before_prove_data.items()}
         logger.info(
             f"Calculated PROVISION for {provision_params.scenario_id} and {provision_params.service_type_id}"
@@ -306,6 +361,7 @@ class ProvisionService:
                     error=f"{type(e).__name__}: {e}",
                 )
                 continue
+            before_prove_data.pop("normative")
             layers = None
             if service_info.as_layer:
                 layers = ProvisionSchema(
@@ -324,3 +380,62 @@ class ProvisionService:
             )
         logger.info(f"Calculated MULTI PROVISION for {multi_params.scenario_id}")
         return MultiProvisionSchema(services=results)
+
+    async def calculate_normative_provision(
+        self, params: NormativeProvisionDTO, token: str
+    ) -> dict:
+        """
+        Calculate provision of scenario residents by the normative of a regulatory norm
+        Args:
+            params (NormativeProvisionDTO): scenario, service type and norm values
+            token (str): Authorization token
+        Returns:
+            dict: applied normative, provision summary and residential buildings with
+            demand, demand supplied within accessibility, provision value and is_project
+        """
+
+        logger.info(
+            f"Started normative provision for {params.scenario_id} "
+            f"and service {params.service_type_id}"
+        )
+        project_id = await self.gateway.get_project_id_by_scenario(
+            params.scenario_id, token
+        )
+        shared_data = await self._fetch_shared_data(
+            project_id=project_id, scenario_id=params.scenario_id, token=token
+        )
+        prove_data = await self._calculate_for_service(
+            shared_data=shared_data,
+            scenario_id=params.scenario_id,
+            service_type_id=params.service_type_id,
+            token=token,
+            normative_override=params.override(),
+        )
+        normative = prove_data.pop("normative")
+        buildings = prove_data["buildings"].reset_index()
+        columns = [
+            column
+            for column in (
+                "building_id",
+                "is_project",
+                "population",
+                "demand",
+                "supplied_demands_within",
+                "supplied_demands_without",
+                "demand_left",
+                "provision_value",
+                "geometry",
+            )
+            if column in buildings.columns
+        ]
+        logger.info(
+            f"Calculated NORMATIVE PROVISION for {params.scenario_id} "
+            f"and {params.service_type_id}"
+        )
+        return {
+            "normative": normative,
+            "summary": self._build_summary(
+                buildings=prove_data["buildings"], services=prove_data["services"]
+            ).model_dump(),
+            "buildings": json.loads(buildings[columns].to_crs(4326).to_json()),
+        }

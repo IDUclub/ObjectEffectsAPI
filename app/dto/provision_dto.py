@@ -1,4 +1,6 @@
-from pydantic import BaseModel, Field
+from typing import Literal
+
+from pydantic import BaseModel, Field, model_validator
 
 
 class ProvisionDTO(BaseModel):
@@ -11,3 +13,40 @@ class ProvisionDTO(BaseModel):
         examples=[200],
         description="Target population for project territory",
     )
+
+
+class NormativeOverride(BaseModel):
+    """Normative values set by a regulatory norm instead of the Urban API ones."""
+
+    capacity_per_1000: float | None = Field(
+        default=None, gt=0, description="Places per 1000 residents"
+    )
+    accessibility_type: Literal["time", "dist"] | None = Field(
+        default=None, description="time — minutes, dist — metres"
+    )
+    accessibility_value: float | None = Field(default=None, gt=0)
+
+    @model_validator(mode="after")
+    def accessibility_has_a_type(self) -> "NormativeOverride":
+        if (self.accessibility_type is None) != (self.accessibility_value is None):
+            raise ValueError("accessibility_type and accessibility_value go together")
+        return self
+
+    def is_complete(self) -> bool:
+        """Both values are set, so the Urban API normative is not needed."""
+        return (
+            self.capacity_per_1000 is not None and self.accessibility_value is not None
+        )
+
+
+class NormativeProvisionDTO(NormativeOverride):
+
+    scenario_id: int = Field(..., examples=[192], description="Scenario ID")
+    service_type_id: int = Field(..., examples=[22], description="Service type ID")
+
+    def override(self) -> NormativeOverride:
+        return NormativeOverride(
+            capacity_per_1000=self.capacity_per_1000,
+            accessibility_type=self.accessibility_type,
+            accessibility_value=self.accessibility_value,
+        )

@@ -1,11 +1,12 @@
 import traceback
+from typing import Literal
 
 from fastmcp import FastMCP
 from loguru import logger
 
 from app.common.auth.service_auth import get_mcp_user_id
 from app.dependencies import provision_mcp_service, service_token_verifier
-from app.dto.provision_dto import ProvisionDTO
+from app.dto.provision_dto import NormativeProvisionDTO, ProvisionDTO
 from app.schemas.provision_base_schema import (
     MultiProvisionRequestSchema,
     ServiceInfoSchema,
@@ -129,5 +130,59 @@ async def calc_services_provision(
         tb = traceback.format_exc()
         logger.opt(exception=True).error(
             f"Error in MCP tool 'CalculateServicesProvision': {type(e).__name__}: {e}"
+        )
+        raise Exception(f"{type(e).__name__}: {e}\n\nTraceback:\n{tb}") from e
+
+
+@provision_mcp.tool(
+    name="CalculateNormativeProvision",
+    title="Check service provision against a regulatory norm",
+    description="""
+    Calculate provision of scenario residents with one service type using the normative
+    stated by a regulatory norm instead of the Urban API one. Values left empty keep the
+    Urban API normative of the service type.
+
+    Args to select:
+    - scenario_id (int): Scenario ID from Urban API.
+    - service_type_id (int): Service type ID.
+    - capacity_per_1000 (float, optional): Places per 1000 residents set by the norm.
+    - accessibility_type ("time" | "dist", optional): Accessibility unit, minutes or metres.
+    - accessibility_value (float, optional): Accessibility set by the norm.
+
+    Returns:
+        {
+            "normative": {"capacity_per_1000", "capacity_type",
+                          "accessibility_value", "accessibility_type"},
+            "summary": {... provision summary ...},
+            "buildings": FeatureCollection of residential buildings with building_id,
+                is_project, population, demand, supplied_demands_within,
+                supplied_demands_without, demand_left, provision_value
+        }
+    """,
+)
+async def calc_normative_provision(
+    scenario_id: int,
+    service_type_id: int,
+    capacity_per_1000: float | None = None,
+    accessibility_type: Literal["time", "dist"] | None = None,
+    accessibility_value: float | None = None,
+):
+
+    try:
+        user_id = get_mcp_user_id()
+        params = NormativeProvisionDTO(
+            scenario_id=scenario_id,
+            service_type_id=service_type_id,
+            capacity_per_1000=capacity_per_1000,
+            accessibility_type=accessibility_type,
+            accessibility_value=accessibility_value,
+        )
+        return await provision_mcp_service.calculate_normative_provision(
+            params, user_id
+        )
+    except Exception as e:
+        tb = traceback.format_exc()
+        logger.opt(exception=True).error(
+            f"Error in MCP tool 'CalculateNormativeProvision': {type(e).__name__}: {e}"
         )
         raise Exception(f"{type(e).__name__}: {e}\n\nTraceback:\n{tb}") from e
