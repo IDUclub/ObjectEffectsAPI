@@ -13,6 +13,7 @@ from app.common.modules import (
     matrix_builder,
     objectnat_calculator,
 )
+from app.common.modules.data_restorator import DEFAULT_LIVING_AREA_PER_PERSON
 from app.dto.provision_dto import (
     NormativeOverride,
     NormativeProvisionDTO,
@@ -39,6 +40,8 @@ class ProvisionService:
         project_id: int,
         scenario_id: int,
         token: str,
+        target_population: int | None = None,
+        living_area_per_person: float = DEFAULT_LIVING_AREA_PER_PERSON,
     ) -> dict:
         """
         Fetch scenario data which does not depend on service type
@@ -46,6 +49,9 @@ class ProvisionService:
             project_id (int): Project ID
             scenario_id (int): Target scenario ID
             token (str): Authorization token
+            target_population (int | None): scenario population set by the caller;
+                it replaces the Urban API indicator and the housing capacity
+            living_area_per_person (float): m2 of living area per resident
         Returns:
             dict: project data, context and target scenario buildings with populations
         """
@@ -79,6 +85,8 @@ class ProvisionService:
             "context_buildings": context_buildings,
             "target_scenario_population": target_scenario_population,
             "target_scenario_buildings": target_scenario_buildings,
+            "explicit_population": target_population,
+            "living_area_per_person": living_area_per_person,
         }
 
     async def _resolve_normative(
@@ -163,7 +171,9 @@ class ProvisionService:
             service_normative=normative_data["services_capacity_per_1000_normative"],
             service_normative_type=normative_data["capacity_type"],
             target_population=shared_data["context_population"],
+            living_area_per_person=shared_data["living_area_per_person"],
         )
+        population = {"context": context_buildings.attrs.get("population")}
         context_buildings["is_project"] = False
         context_services = await self.gateway.get_project_context_services(
             scenario_id=project_data["base_scenario"]["id"],
@@ -187,7 +197,10 @@ class ProvisionService:
             service_normative=normative_data["services_capacity_per_1000_normative"],
             service_normative_type=normative_data["capacity_type"],
             target_population=shared_data["target_scenario_population"],
+            explicit_population=shared_data["explicit_population"],
+            living_area_per_person=shared_data["living_area_per_person"],
         )
+        population["scenario"] = target_scenario_buildings.attrs.get("population")
         target_scenario_buildings["is_project"] = True
         target_scenario_services = await self.gateway.get_scenario_services(
             scenario_id=scenario_id,
@@ -240,6 +253,7 @@ class ProvisionService:
             matrix=before_matrix,
             service_normative=normative_data["normative_value"],
         )
+        before_prove_data["population"] = population
         before_prove_data["normative"] = {
             "capacity_per_1000": normative_data.get(
                 "services_capacity_per_1000_normative"
@@ -312,11 +326,8 @@ class ProvisionService:
             project_id=provision_params.project_id,
             scenario_id=provision_params.scenario_id,
             token=token,
+            target_population=provision_params.target_population,
         )
-        if provision_params.target_population:
-            shared_data["target_scenario_population"] = (
-                provision_params.target_population
-            )
         before_prove_data = await self._calculate_for_service(
             shared_data=shared_data,
             scenario_id=provision_params.scenario_id,
@@ -324,6 +335,7 @@ class ProvisionService:
             token=token,
         )
         before_prove_data.pop("normative")
+        before_prove_data.pop("population")
         result = {k: json.loads(v.to_json()) for k, v in before_prove_data.items()}
         logger.info(
             f"Calculated PROVISION for {provision_params.scenario_id} and {provision_params.service_type_id}"
@@ -353,9 +365,8 @@ class ProvisionService:
             project_id=project_id,
             scenario_id=multi_params.scenario_id,
             token=token,
+            target_population=multi_params.target_population,
         )
-        if multi_params.target_population:
-            shared_data["target_scenario_population"] = multi_params.target_population
         results = {}
         for service_type_id, service_info in multi_params.services.items():
             try:
@@ -375,6 +386,7 @@ class ProvisionService:
                 )
                 continue
             before_prove_data.pop("normative")
+            before_prove_data.pop("population")
             layers = None
             if service_info.as_layer:
                 layers = ProvisionSchema(
@@ -415,7 +427,11 @@ class ProvisionService:
             params.scenario_id, token
         )
         shared_data = await self._fetch_shared_data(
-            project_id=project_id, scenario_id=params.scenario_id, token=token
+            project_id=project_id,
+            scenario_id=params.scenario_id,
+            token=token,
+            target_population=params.target_population,
+            living_area_per_person=params.living_area_per_person,
         )
         prove_data = await self._calculate_for_service(
             shared_data=shared_data,
@@ -425,6 +441,7 @@ class ProvisionService:
             normative_override=params.override(),
         )
         normative = prove_data.pop("normative")
+        population = prove_data.pop("population")
         buildings = prove_data["buildings"].reset_index()
         columns = [
             column
@@ -447,6 +464,7 @@ class ProvisionService:
         )
         return {
             "normative": normative,
+            "population": population,
             "summary": self._build_summary(
                 buildings=prove_data["buildings"], services=prove_data["services"]
             ).model_dump(),

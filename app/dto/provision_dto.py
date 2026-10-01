@@ -56,6 +56,14 @@ class NormativeProvisionDTO(NormativeOverride):
 
     scenario_id: int = Field(..., examples=[192], description="Scenario ID")
     service_type_id: int = Field(..., examples=[22], description="Service type ID")
+    target_population: int | None = Field(
+        default=None,
+        gt=0,
+        description="Scenario population; replaces the Urban API indicator",
+    )
+    living_area_per_person: float = Field(
+        default=33.0, gt=5, le=200, description="m2 of living area per resident"
+    )
 
     def override(self) -> NormativeOverride:
         return NormativeOverride(

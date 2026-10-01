@@ -149,6 +149,10 @@ async def calc_services_provision(
     - residents_per_service (float, optional): Residents per one service object for norms
       like "1 object per N thousand residents"; then demand is the residents themselves.
       Excludes capacity_per_1000.
+    - target_population (int, optional): Scenario population. Without it the population is
+      the Urban API indicator when it agrees with the housing capacity within a factor of 2,
+      else the housing capacity (living area / living_area_per_person).
+    - living_area_per_person (float, optional): m2 of living area per resident, default 33.
     - accessibility_type ("time" | "dist", optional): Accessibility unit, minutes or metres.
     - accessibility_value (float, optional): Accessibility set by the norm.
 
@@ -156,6 +160,9 @@ async def calc_services_provision(
         {
             "normative": {"capacity_per_1000", "capacity_type", "residents_per_service",
                           "accessibility_value", "accessibility_type"},
+            "population": {"scenario" | "context": {"source": "explicit" | "indicator" |
+                           "housing_stock", "population", "housing_capacity", "indicator",
+                           "living_area_per_person", "buildings"}},
             "summary": {... provision summary ...},
             "buildings": FeatureCollection of residential buildings with building_id,
                 is_project, population, demand, supplied_demands_within,
@@ -170,6 +177,8 @@ async def calc_normative_provision(
     accessibility_type: Literal["time", "dist"] | None = None,
     accessibility_value: float | None = None,
     residents_per_service: float | None = None,
+    target_population: int | None = None,
+    living_area_per_person: float = 33.0,
 ):
 
     try:
@@ -179,6 +188,8 @@ async def calc_normative_provision(
             service_type_id=service_type_id,
             capacity_per_1000=capacity_per_1000,
             residents_per_service=residents_per_service,
+            target_population=target_population,
+            living_area_per_person=living_area_per_person,
             accessibility_type=accessibility_type,
             accessibility_value=accessibility_value,
         )
