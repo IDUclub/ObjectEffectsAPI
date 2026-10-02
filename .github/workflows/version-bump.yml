@@ -8,9 +8,12 @@
 #     plain Merge button waits for auto-merge;
 #   * when dev moves (another PR merged), every PR waiting in auto-merge is bumped again on top
 #     of the new dev, so no two merges share a version.
+# The passing "version" status is set with the VERSION_STATUS_TOKEN secret (a token with the
+# repo:status scope): a merge that auto-merge makes because GITHUB_TOKEN passed the last check
+# starts no workflow, so the dev release would not run.
 # The bump commit is pushed with GITHUB_TOKEN: the PR runs it would start wait for approval
 # (github-actions[bot] counts as a first-time contributor) and are not needed - "version" is set
-# by the bump itself, and the commit changes only the version files.
+# by the bump itself, and the commit changes only the version files. Don't approve them.
 
 name: Version bump
 
@@ -64,6 +67,7 @@ jobs:
         if: ${{ github.event.pull_request.auto_merge }}
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION_STATUS_TOKEN: ${{ secrets.VERSION_STATUS_TOKEN }}
           PR: ${{ github.event.pull_request.number }}
         run: |
           cp -r .github/scripts "${RUNNER_TEMP}/versioning"
@@ -92,6 +96,7 @@ jobs:
       - name: Bump every PR into dev with auto-merge enabled
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION_STATUS_TOKEN: ${{ secrets.VERSION_STATUS_TOKEN }}
         run: |
           prs="$(gh pr list --repo "$GITHUB_REPOSITORY" --base dev --state open \
             --json number,autoMergeRequest,isCrossRepository \
