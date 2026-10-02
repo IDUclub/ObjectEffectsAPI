@@ -13,13 +13,18 @@ ENV PYTHONUNBUFFERED=1
 
 # Enables env file
 ENV APP_ENV=development
-# Install the locked dependencies (uv.lock) into /app/.venv
-COPY --from=ghcr.io/astral-sh/uv:0.12.10 /uv /uvx /bin/
-WORKDIR /app
-COPY pyproject.toml uv.lock .python-version ./
-RUN uv sync --frozen --no-dev
-ENV PATH="/app/.venv/bin:$PATH"
+# add pyppi mirror to config
+COPY pip.conf /etc/xdg/pip/pip.conf
+# Install the versions locked in uv.lock: uv exports them with their hashes and pip installs
+# them through the mirror
+RUN python -m pip install --disable-pip-version-check uv==0.12.10
+COPY pyproject.toml uv.lock .python-version /tmp/project/
+RUN uv export --frozen --no-dev --no-emit-project --project /tmp/project \
+        -o /tmp/requirements.txt \
+    && python -m pip install --disable-pip-version-check --no-cache-dir -r /tmp/requirements.txt \
+    && rm -rf /tmp/project /tmp/requirements.txt
 
+WORKDIR /app
 COPY . /app
 
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
