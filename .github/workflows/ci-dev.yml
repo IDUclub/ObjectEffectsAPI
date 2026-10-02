@@ -16,12 +16,7 @@ jobs:
       test-command: |
         python -m pip install --disable-pip-version-check uv==0.12.10
         uv python install 3.11
-        uv venv --python 3.11
-        uv pip install --python .venv/bin/python \
-          --requirement requirements.txt \
-          --requirement requirements-auth.txt \
-          pytest \
-          pytest-asyncio
+        uv sync --locked
         cp .env.example .env.test
-        APP_ENV=test .venv/bin/python -m pytest --verbose tests
+        APP_ENV=test uv run pytest --verbose
     secrets: inherit

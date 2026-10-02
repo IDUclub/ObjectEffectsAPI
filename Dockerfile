@@ -13,14 +13,13 @@ ENV PYTHONUNBUFFERED=1
 
 # Enables env file
 ENV APP_ENV=development
-# add pyppi mirror to config
-COPY pip.conf /etc/xdg/pip/pip.conf
-# Install pip requirements
-COPY requirements.txt .
-COPY requirements-auth.txt .
-RUN python -m pip install -r requirements.txt -r requirements-auth.txt
-
+# Install the locked dependencies (uv.lock) into /app/.venv
+COPY --from=ghcr.io/astral-sh/uv:0.12.10 /uv /uvx /bin/
 WORKDIR /app
+COPY pyproject.toml uv.lock .python-version ./
+RUN uv sync --frozen --no-dev
+ENV PATH="/app/.venv/bin:$PATH"
+
 COPY . /app
 
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
