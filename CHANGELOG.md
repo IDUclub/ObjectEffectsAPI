@@ -1,4 +1,4 @@
-## v0.4.1 (2026-10-02)
+## v0.4.2 (2026-10-02)
 
 [chore/versioning-policy](https://github.com/IDUclub/ObjectEffectsAPI/pull/60) (#60)
 
