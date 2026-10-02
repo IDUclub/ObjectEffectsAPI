@@ -1,3 +1,10 @@
+## v0.4.3 (2026-10-02)
+
+[refactor/uv](https://github.com/IDUclub/ObjectEffectsAPI/pull/62) (#62)
+
+- refactor: manage dependencies with uv
+- build: install the locked dependencies through the PyPI mirror
+
 ## v0.4.2 (2026-10-02)
 
 [fix/version-status-token](https://github.com/IDUclub/ObjectEffectsAPI/pull/61) (#61)

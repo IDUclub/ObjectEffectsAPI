@@ -1,9 +1,43 @@
-# Project metadata for the version policy only: dependencies stay in requirements*.txt (pip).
 [project]
 name = "object-effects-api"
-version = "0.4.2"
+version = "0.4.3"
 description = "Territorial effects and provision calculation (ObjectNat) over REST and MCP"
 requires-python = ">=3.11"
+dependencies = [
+    "aiohttp~=3.14.3",
+    "fastapi~=0.141.1",
+    "fastmcp~=3.4.5",
+    "geopandas~=1.1.4",
+    "gunicorn~=26.0.0",
+    "idu-service-auth @ https://github.com/IDUclub/idu-service-auth/archive/1b8a418d9b1ab702860eb7289a3b75244666a8d8.tar.gz",
+    "loguru~=0.7.3",
+    "numpy~=2.4.6",
+    "objectnat~=1.4.1",
+    "opentelemetry-api~=1.44.0",
+    "opentelemetry-exporter-prometheus~=0.65b0",
+    "opentelemetry-sdk~=1.44.0",
+    "opentelemetry-semantic-conventions~=0.65b0",
+    "pandas~=2.3.3",
+    "prometheus-client~=0.26.0",
+    "psutil~=7.2.2",
+    "pydantic~=2.13.4",
+    "requests~=2.34.2",
+    "scipy~=1.17.1",
+    "shapely~=2.1.2",
+    "starlette~=1.3.1",
+    "uvicorn~=0.52.1",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit~=4.5.1",
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
 
 # Read by .github/scripts/versioning.py: every file that repeats the version.
 [tool.commitizen]
