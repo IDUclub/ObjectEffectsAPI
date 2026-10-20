@@ -1,3 +1,10 @@
+## v0.4.4 (2026-10-20)
+
+[fix/ICII-190-docker-log-rotation](https://github.com/IDUclub/ObjectEffectsAPI/pull/63) (#63)
+
+- fix: cap container logs at 100 MB in docker compose
+- fix: rotate the log file by size once a day and stop writing every record twice
+
 ## v0.4.3 (2026-10-02)
 
 [refactor/uv](https://github.com/IDUclub/ObjectEffectsAPI/pull/62) (#62)
