@@ -6,6 +6,13 @@ import pandas as pd
 
 from app.common.exceptions.http_exception_wrapper import http_exception
 
+# Share of a floor area that is living area, when the official one is unknown.
+LIVING_AREA_SHARE = 0.8
+DEFAULT_LIVING_AREA_PER_PERSON = 33.0
+# A population indicator further than this factor from the housing capacity
+# belongs to another territory (e.g. a whole municipality) and is not used.
+INDICATOR_TOLERANCE = 2.0
+
 
 class DataRestorator:
     """
@@ -34,20 +41,55 @@ class DataRestorator:
         return buildings
 
     @staticmethod
-    def _restore_target_population(
-        buildings: gpd.GeoDataFrame,
-    ) -> int:
+    def _living_area(buildings: gpd.GeoDataFrame) -> pd.Series:
         """
-        Function estimates target population for territory
+        Living area of each building in m2, buildings in a metric CRS
         Args:
-            buildings (gpd.GeoDataFrame): living buildings data
+            buildings (gpd.GeoDataFrame): living buildings with "storeys_count" and,
+                when known, "living_area_official" and "building_area_official"
         Returns:
-            int: target population to restore
+            pd.Series: official living area, else footprint x storeys x 0.8
         """
 
-        local_crs = buildings.estimate_utm_crs()
-        buildings = buildings.to_crs(local_crs)
-        return int(sum(buildings.area * buildings["storeys_count"]) * 0.8 / 33)
+        footprint = buildings.area
+        if "building_area_official" in buildings.columns:
+            official_footprint = pd.to_numeric(
+                buildings["building_area_official"], errors="coerce"
+            )
+            footprint = official_footprint.where(official_footprint > 0, footprint)
+        modeled = footprint * buildings["storeys_count"] * LIVING_AREA_SHARE
+        if "living_area_official" not in buildings.columns:
+            return modeled
+        official = pd.to_numeric(buildings["living_area_official"], errors="coerce")
+        return official.where(official > 0, modeled)
+
+    @staticmethod
+    def _choose_population(
+        capacity: float,
+        indicator: int | None,
+        explicit: int | None,
+    ) -> tuple[int, str]:
+        """
+        Total population to distribute and where it comes from
+        Args:
+            capacity (float): residents the housing stock holds
+            indicator (int | None): Urban API population indicator
+            explicit (int | None): population set by the caller
+        Returns:
+            tuple[int, str]: population and its source — "explicit", "indicator"
+            or "housing_stock"
+        """
+
+        if explicit:
+            return int(explicit), "explicit"
+        if indicator and capacity <= 0:
+            return int(indicator), "indicator"
+        if (
+            indicator
+            and 1 / INDICATOR_TOLERANCE <= indicator / capacity <= INDICATOR_TOLERANCE
+        ):
+            return int(indicator), "indicator"
+        return int(round(capacity)), "housing_stock"
 
     @staticmethod
     def _balance_population(
@@ -63,6 +105,8 @@ class DataRestorator:
             gpd.GeoDataFrame: buildings data with restored "population" attribute
         """
 
+        if buildings["living_area"].sum() <= 0:
+            buildings["living_area"] = 1
         shares = buildings["living_area"] / buildings["living_area"].sum()
         buildings["population"] = np.floor(shares * population).astype(int)
         remainder = int(population - buildings["population"].sum())
@@ -76,31 +120,50 @@ class DataRestorator:
         self,
         buildings: gpd.GeoDataFrame,
         target_population: int | None = None,
+        explicit_population: int | None = None,
+        living_area_per_person: float = DEFAULT_LIVING_AREA_PER_PERSON,
     ):
         """
-        Function fills population data with objectnat population restoration
+        Function distributes residents between buildings by their living area.
+
+        The total is the explicit population when given, else the Urban API indicator
+        when it agrees with the housing capacity (living area / m2 per person) within
+        INDICATOR_TOLERANCE, else the housing capacity itself. How the total was chosen
+        is kept in ``buildings.attrs["population"]``.
         Args:
             buildings (gpd.GeoDataFrame): living buildings data
-            target_population (int | None): Target population to restore, defaults to None
+            target_population (int | None): Urban API population indicator
+            explicit_population (int | None): population set by the caller, always used
+            living_area_per_person (float): m2 of living area per resident
         """
 
         if buildings.empty:
             return buildings
         buildings = self._restore_stores(buildings)
-        if not target_population:
-            target_population = self._restore_target_population(buildings)
         local_crs = buildings.estimate_utm_crs()
         buildings = buildings.to_crs(local_crs)
         buildings["storeys_count"] = buildings["storeys_count"].apply(
-            lambda x: int(round(x))
+            lambda x: max(int(round(x)), 1)
         )
-        buildings["living_area"] = buildings.area * buildings["storeys_count"] * 0.8
-        buildings["living_area"] = buildings["living_area"].astype(int)
+        buildings["living_area"] = self._living_area(buildings).fillna(0).astype(int)
+        capacity = float(buildings["living_area"].sum()) / living_area_per_person
+        population, source = self._choose_population(
+            capacity, target_population, explicit_population
+        )
         buildings = self._balance_population(
             buildings=buildings,
-            population=int(target_population),
+            population=population,
         )
-        return buildings.to_crs(4326)
+        result = buildings.to_crs(4326)
+        result.attrs["population"] = {
+            "source": source,
+            "population": population,
+            "housing_capacity": int(round(capacity)),
+            "indicator": int(target_population) if target_population else None,
+            "living_area_per_person": living_area_per_person,
+            "buildings": int(len(result)),
+        }
+        return result
 
     @staticmethod
     def _generate_demand_per_building(
@@ -133,6 +196,8 @@ class DataRestorator:
         service_normative: int,
         service_normative_type: Literal["unit", "capacity"],
         target_population: int | None = None,
+        explicit_population: int | None = None,
+        living_area_per_person: float = DEFAULT_LIVING_AREA_PER_PERSON,
     ) -> gpd.GeoDataFrame:
         """
         Function restores demands in buildings by population for service
@@ -140,7 +205,9 @@ class DataRestorator:
             buildings: living buildings data
             service_normative (int): service normative
             service_normative_type (str): service normative type
-            target_population (int | None): Target population to restore, defaults to None
+            target_population (int | None): Urban API population indicator
+            explicit_population (int | None): population set by the caller
+            living_area_per_person (float): m2 of living area per resident
         Returns:
             gdp.GeoDataFrame: buildings data with restored demands
         """
@@ -150,6 +217,8 @@ class DataRestorator:
         buildings = self._restore_population(
             buildings=buildings,
             target_population=target_population,
+            explicit_population=explicit_population,
+            living_area_per_person=living_area_per_person,
         )
         if service_normative_type == "capacity":
             target_total_demand = (

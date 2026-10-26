@@ -16,14 +16,6 @@ from .observability import OpenTelemetryAgent, PrometheusConfig
 from .observability.metrics import setup_metrics
 from .provision.provision_controller import provision_router
 
-log_format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <b>{message}</b>"
-
-logger.add(
-    ".log",
-    format=log_format,
-    level="INFO",
-)
-
 metrics = setup_metrics()
 
 

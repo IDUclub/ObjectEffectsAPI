@@ -4,6 +4,23 @@ import geopandas as gpd
 import pandas as pd
 
 
+def _floors_from_properties(building: dict) -> float | None:
+    properties = building.get("properties") or {}
+    candidates = (
+        properties.get("floor_count_max"),
+        properties.get("floor_count_min"),
+        (properties.get("osm_data") or {}).get("building:levels"),
+    )
+    for value in candidates:
+        try:
+            floors = float(str(value).replace(",", "."))
+        except (TypeError, ValueError):
+            continue
+        if floors > 0:
+            return floors
+    return None
+
+
 class AttributeParser:
     """
     Cass aimed to parse data in acceptable format to convert in other dtypes
@@ -33,6 +50,19 @@ class AttributeParser:
                 living_buildings["physical_objects"].apply,
                 lambda x: x[0].get("properties").get("Количество этажей"),
             )
+        building = living_buildings["physical_objects"].apply(
+            lambda x: x[0].get("building") or {}
+        )
+        living_buildings["building_area_official"] = building.apply(
+            lambda x: x.get("building_area_official")
+        )
+        living_buildings["living_area_official"] = building.apply(
+            lambda x: (x.get("properties") or {}).get("living_area_official")
+        )
+        # Floors missing in the building record may still be in its source data.
+        living_buildings["storeys_count"] = living_buildings["storeys_count"].fillna(
+            building.apply(_floors_from_properties)
+        )
         living_buildings["building_id"] = await asyncio.to_thread(
             living_buildings["physical_objects"].apply,
             lambda x: x[0]["physical_object_id"],

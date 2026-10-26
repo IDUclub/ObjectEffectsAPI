@@ -15,10 +15,14 @@ ENV PYTHONUNBUFFERED=1
 ENV APP_ENV=development
 # add pyppi mirror to config
 COPY pip.conf /etc/xdg/pip/pip.conf
-# Install pip requirements
-COPY requirements.txt .
-COPY requirements-auth.txt .
-RUN python -m pip install -r requirements.txt -r requirements-auth.txt
+# Install the versions locked in uv.lock: uv exports them with their hashes and pip installs
+# them through the mirror
+RUN python -m pip install --disable-pip-version-check uv==0.12.10
+COPY pyproject.toml uv.lock .python-version /tmp/project/
+RUN uv export --frozen --no-dev --no-emit-project --project /tmp/project \
+        -o /tmp/requirements.txt \
+    && python -m pip install --disable-pip-version-check --no-cache-dir -r /tmp/requirements.txt \
+    && rm -rf /tmp/project /tmp/requirements.txt
 
 WORKDIR /app
 COPY . /app
