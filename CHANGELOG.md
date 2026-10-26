@@ -1,3 +1,17 @@
+## v0.4.5 (2026-10-26)
+
+[chore/sync-main](https://github.com/IDUclub/ObjectEffectsAPI/pull/65) (#65)
+
+- Merge pull request #40 from IDUclub/dev
+- Merge pull request #43 from IDUclub/dev
+- Merge pull request #45 from IDUclub/dev
+- Merge pull request #46 from IDUclub/codex/fix-m2m-user-context (#47)
+- Merge pull request #53 from IDUclub/dev
+- ci: (#54) (#55)
+- Merge pull request #57 from IDUclub/dev
+- hot-fix: (#58)
+- v0.4.4 (#64)
+
 ## v0.4.4 (2026-10-20)
 
 [fix/ICII-190-docker-log-rotation](https://github.com/IDUclub/ObjectEffectsAPI/pull/63) (#63)

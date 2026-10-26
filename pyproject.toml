@@ -1,6 +1,6 @@
 [project]
 name = "object-effects-api"
-version = "0.4.4"
+version = "0.4.5"
 description = "Territorial effects and provision calculation (ObjectNat) over REST and MCP"
 requires-python = ">=3.11"
 dependencies = [
